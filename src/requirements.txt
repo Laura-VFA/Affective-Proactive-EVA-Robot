@@ -1,0 +1,5 @@
+portaudio19-dev 
+pyaudio
+ibm-watson>=5.3.0
+google-cloud-texttospeech
+google-cloud-speech
