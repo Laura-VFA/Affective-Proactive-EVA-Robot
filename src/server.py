@@ -10,5 +10,5 @@ def query(audio_blob):
     print('E: ' + text_response)
 
     # TTS and send back the response
-    audio_stream = util.getSpeechFromText(text_response)
-    return audio_stream
+    audio_response = util.getSpeechFromText(text_response)
+    return audio_response

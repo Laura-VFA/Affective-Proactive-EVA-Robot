@@ -1,17 +1,12 @@
-# TODO ACABARRRR
-
 import pyaudio
-import wave
-from server import query
-
+import server
 
 # recording configs
 CHUNK = 2048
 FORMAT = pyaudio.paInt16
 CHANNELS = 1 # con 8 pasa cosa de que lo intenta reproducir a 8 channels
-RATE = 96000
+RATE = 16000 #24000
 RECORD_SECONDS = 5
-WAVE_OUTPUT_FILENAME = "output.wav"
 
 # create & configure microphone
 mic = pyaudio.PyAudio()
@@ -28,9 +23,36 @@ print("* recording")
 
 # read & store microphone data per frame read
 frames = []
+for i in range(0, int(RATE / CHUNK * RECORD_SECONDS)):
+    data = stream.read(CHUNK)
+    frames.append(data)
 
-chunk = 2048
-FORMAT = pyaudio.paInt16
-CHANNELS = 1 # con 8 pasa cosa de que lo intenta reproducir a 8 channels
-RATE = 16000
+print("* done recording")
 
+# kill the mic and recording
+stream.stop_stream()
+stream.close()
+mic.terminate()
+
+print("* sending query")
+response_audio = server.query(b''.join(frames))
+
+print("* playing response")
+# Create an interface to PortAudio
+speaker = pyaudio.PyAudio()
+
+# Open a .Stream object to write the WAV file to
+# 'output = True' indicates that the sound will be played rather than recorded
+RATE_SPK = 24000
+stream = speaker.open(format = FORMAT,
+                channels = CHANNELS,
+                rate = RATE_SPK,
+                output = True,
+                output_device_index=1)
+
+# Play the audio
+stream.write(response_audio)
+
+# Close and terminate the stream
+stream.close()
+speaker.terminate()

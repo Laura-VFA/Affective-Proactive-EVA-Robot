@@ -3,3 +3,6 @@ pyaudio
 ibm-watson>=5.3.0
 google-cloud-texttospeech
 google-cloud-speech
+google-cloud-translate
+pyqt5
+libcst=0.2.5
