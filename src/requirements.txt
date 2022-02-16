@@ -6,3 +6,4 @@ google-cloud-speech
 google-cloud-translate
 pyqt5
 libcst=0.2.5
+webrtcvad

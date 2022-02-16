@@ -87,8 +87,12 @@ translate_client = translate.Client(credentials=credentials) #keyfilename??
 
 
 def translateEStoEN(text):
-    result = translate_client.translate(text, target_language='en')
-    return result["translatedText"]
+    try:
+        result = translate_client.translate(text, target_language='en')
+    except Exception as e:
+        print('translation Error: ', str(e))
+    else:
+        return result["translatedText"]
 
 def analyzeMood(text):
     nluOptions['text'] = text
@@ -96,7 +100,8 @@ def analyzeMood(text):
         response = nlu.analyze(**nluOptions).get_result()
     except Exception as e:
         print('analyzeMood error: ', str(e))
-    return response['emotion']['document']['emotion']
+    else:
+        return response['emotion']['document']['emotion']
 
 def getTextFromSpeech(audio_bytes):
     try:
@@ -122,8 +127,9 @@ def getSpeechFromText(text):
         )
     except Exception as e:
         print('TTS Error: ', str(e))
+    else:
 
-    return response.audio_content
+        return response.audio_content
 
 def genResponse(data):
     if data != '':
@@ -156,9 +162,22 @@ def genResponse(data):
         ).get_result()
     except Exception as e:
         print('genResponse Error: ', str(e))
-
-    final_response = '. '.join([resp['text'] for resp in response['output']['generic']])
-    return final_response
+    
+    else:
+        final_response = '. '.join([resp['text'] for resp in response['output']['generic']])
+        return final_response
 
 
 # TODO: AÑADIR AWAITS
+#TODO: lo de catch de la session
+#Dudas: la informacion de mood se lanza siempre???????
+#PRoblema de mi codigo: solo habla cuando yo le hablo... necesidad de cambiar el código
+#???? Mejorar lo de los moods para que tengan un nodo de intencion (no con variables)
+#Recuerda: chapuza del NOT #GENEnding porque adios era muy triste al parecer
+#Arreglar lo del orden de las emociones si tienes dos > 0.5
+#Ver a ver si consigo que las variables de entorno sirvan para pillas automaticamente las credenciales
+# COrregir errores (de tipo try catch con cosas vacias y demas)
+# quiza poner base de datos con el nombre y otras cosas fijas del usuario, y que se manden en la peticion en el contexto
+# logging?
+# limpiar todo esto un poquito
+# Esperemos que esto sea mas eficiente pero... borrar cosas que no se usan para evitar que salgan esos warnings feos
