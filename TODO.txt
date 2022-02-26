@@ -1,27 +1,27 @@
-AÑADIR AWAITS
-lo de catch de la sessionm (patron singleton de la sesion) ---> crearla en estado listening para no crear delay en la primera respuesta
-Dudas: la informacion de mood se lanza siempre???????
-PRoblema de mi codigo: solo habla cuando yo le hablo... necesidad de cambiar el código
+IBM
 ???? Mejorar lo de los moods para que tengan un nodo de intencion (no con variables)
 Recuerda: chapuza del NOT #GENEnding porque adios era muy triste al parecer
 Arreglar lo del orden de las emociones si tienes dos > 0.5
+Quiza habria que mandar en el nodo un "no espero respuesta"(is_question) o algo asi, para finalizar la conversacion
+
+OTROS
+lo de catch de la sessionm (patron singleton de la sesion) ---> crearla en estado listening para no crear delay en la primera respuesta
+PRoblema de mi codigo: solo habla cuando yo le hablo... necesidad de cambiar el código
 Ver a ver si consigo que las variables de entorno sirvan para pillas automaticamente las credenciales (o en su defecto el archivo como vairable de entorno)
 COrregir errores (de tipo try catch con cosas vacias y demas)
 quiza poner base de datos con el nombre y otras cosas fijas del usuario, y que se manden en la peticion en el contexto
 logging?
-limpiar todo esto un poquito (quiza sacar constantes a otro .py, o cosas asi)
-Esperemos que esto sea mas eficiente pero... borrar cosas que no se usan para evitar que salgan esos warnings feos
+quitar warnings del audio mic
+limpiar todo esto un poquito (comentarios, quiza sacar constantes a otro .py, o cosas asi,Organizar archivos )
 mirar modos de agresividad en lo de detectar silensio ---> a ver si podemos hacerlo mejor
 mirar el eje y en la activacion de wakeface
-hacer interfaz de constantes (como el rate y demas ), y quiza utils con funciones como frame_generator, speak..
-
-Quiza habria que mandar en el nodo un "no espero respuesta" o algo asi, para finalizar la conversacion
 hacer que grabe a 8 canales, haga la media y lo pase a 1
-
-Si detecta alguna cara, pero este a distancia , pues ni puto caso (quitar falsos positivos cuando estas lejos)
-
+Si detecta alguna cara, pero este a distancia , pues ni puto caso (quitar falsos positivos cuando estas lejos), y asi puedo usar la back?? (no se)
 MIrar para poner la radio
+Arreglar ruido inicial microfono
 
-- IBM -> que devuelva el inconversation
+
+DONES
 - Limpiar git
-- Arreglar ruido inicial microfono
+- AÑADIR AWAITS
+- Dudas: la informacion de mood se lanza siempre???????
