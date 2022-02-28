@@ -2,10 +2,8 @@
 
 import json
 
-from ibm_watson import AssistantV2
-from ibm_watson import NaturalLanguageUnderstandingV1
 from ibm_cloud_sdk_core.authenticators import IAMAuthenticator
-
+from ibm_watson import AssistantV2, NaturalLanguageUnderstandingV1
 
 '''
 with open('./bbdd.json', 'r') as f:
@@ -19,7 +17,6 @@ with open('../credentials/assistant_credentials.json') as json_file:
     auth_data = json.load(json_file)
 
 session_id = ''
-final_response = ''
 assistant_id = auth_data['assistant_id']
 
 assistant = AssistantV2(
@@ -56,7 +53,7 @@ nluOptions = {
 
 
 def genResponse(data, context_data={}):
-    global session_id
+    global session_id, assistant_id
 
     if not data :
         return None

@@ -1,4 +1,3 @@
-from matplotlib.style import context
 from google_api import getTextFromSpeech, getSpeechFromText, translateEStoEN
 from ibm_api import genResponse, analyzeMood
 
