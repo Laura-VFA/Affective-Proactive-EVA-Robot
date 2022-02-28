@@ -1,5 +1,5 @@
 from google_api import getTextFromSpeech, getSpeechFromText, translateEStoEN
-from ibm_api import genResponse, analyzeMood
+from ibm_api import genResponse, analyzeMood, is_session_active, createSession
 
 def query(audio_blob):
     # STT
@@ -25,3 +25,7 @@ def query(audio_blob):
 
     # Send back the response
     return audio_response
+
+def prepare():
+    if not is_session_active():
+        createSession()

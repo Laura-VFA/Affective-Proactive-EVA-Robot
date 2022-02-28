@@ -6,6 +6,7 @@ from services.wakeface import Wakeface
 from services.mic import Recorder
 from services.speaker import Speaker
 
+
 def wf_event_handler(event):
     global eva_state
     if event == 'face_listen' and eva_state == 'idle':
@@ -27,14 +28,15 @@ def mic_event_handler(event, audio=None):
     if event == 'start_recording' and eva_state == 'listening':
         eva_state = 'recording'
         eva_led.set(Recording())
+        server.prepare()
         #disconnect camera
         wf.stop()
-
+        
     if event == 'stop_recording' and eva_state == 'recording':
         eva_state = 'processing_query'
         eva_led.set(Neutral())
-        #audio_response = server.query(audio)
-        audio_response = audio
+        audio_response = server.query(audio)
+        #audio_response = audio
 
         if audio_response:
             eva_state = 'speaking'

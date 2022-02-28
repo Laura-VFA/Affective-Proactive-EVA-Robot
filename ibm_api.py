@@ -1,6 +1,7 @@
 # contains methods for the assistant performance: ibm watson
 
 import json
+from datetime import datetime
 
 from ibm_cloud_sdk_core.authenticators import IAMAuthenticator
 from ibm_watson import AssistantV2, NaturalLanguageUnderstandingV1
@@ -16,6 +17,8 @@ USERNAME = data['username']
 with open('../credentials/assistant_credentials.json') as json_file:
     auth_data = json.load(json_file)
 
+SESSION_TIME = 1 # in minutes
+last_query_time = None
 session_id = ''
 assistant_id = auth_data['assistant_id']
 
@@ -23,7 +26,8 @@ assistant = AssistantV2(
     version='2021-06-14',
 )
 
-def createSession(assistant_id):
+def createSession():
+    global session_id, assistant_id
     try:
         response = assistant.create_session(
             assistant_id=assistant_id
@@ -31,10 +35,7 @@ def createSession(assistant_id):
         session = response['session_id']
     except Exception as e:
         print(('createSession Error: ' + str(e)))
-    return session
-    
-
-session_id = createSession(assistant_id)
+    session_id = session
 
 
 # Natural Language Understanding: Emotions 
@@ -53,58 +54,34 @@ nluOptions = {
 
 
 def genResponse(data, context_data={}):
-    global session_id, assistant_id
+    global session_id, assistant_id, last_query_time
 
     if not data :
         return None
 
-    try:
-        response = assistant.message(
-            assistant_id=assistant_id,
-            session_id=session_id,
-            input={
-                'message_type': 'text',
-                'text': data,
-                'options': {
-                    'return_context': True # For returning the context variables
-                }
-            },
-            context={
-                "skills": {
-                    "main skill": {
-                        "user_defined": context_data
-                    }
+    response = assistant.message(
+        assistant_id=assistant_id,
+        session_id=session_id,
+        input={
+            'message_type': 'text',
+            'text': data,
+            'options': {
+                'return_context': True # For returning the context variables
+            }
+        },
+        context={
+            "skills": {
+                "main skill": {
+                    "user_defined": context_data
                 }
             }
-        ).get_result()
-        #print(response)
+        }
+    ).get_result()
 
-    except Exception as e:
-        print('genResponse Error: ', str(e))
-        session_id = createSession(assistant_id)
-        response = assistant.message(
-            assistant_id=assistant_id,
-            session_id=session_id,
-            input={
-                'message_type': 'text',
-                'text': data,
-                'options': {
-                    'return_context': True # For returning the context variables
-                }
-            },
-            context={
-                "skills": {
-                    "main skill": {
-                        "user_defined": context_data
-                    }
-                }
-            }
-        ).get_result()
-    
-    finally:
-        final_response = '. '.join([resp['text'] for resp in response['output']['generic']])
-        return final_response
+    last_query_time = datetime.now()
 
+    final_response = '. '.join([resp['text'] for resp in response['output']['generic']])
+    return final_response
 
 
 def analyzeMood(text):
@@ -116,3 +93,7 @@ def analyzeMood(text):
     else:
         return response['emotion']['document']['emotion']
 
+
+def is_session_active(): # empty query to check if session is active
+    global last_query_time
+    return last_query_time is not None and (datetime.now() - last_query_time).total_seconds() < SESSION_TIME * 60 
