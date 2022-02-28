@@ -6,7 +6,6 @@ from ibm_watson import AssistantV2
 from ibm_watson import NaturalLanguageUnderstandingV1
 from ibm_cloud_sdk_core.authenticators import IAMAuthenticator
 
-from google_api import translateEStoEN
 
 '''
 with open('./bbdd.json', 'r') as f:
@@ -56,21 +55,12 @@ nluOptions = {
 
 
 
-def genResponse(data):
-    if data != '':
-        translt = translateEStoEN(data)
-        moodAnalysis = analyzeMood(translt)
-        print(moodAnalysis)
-        context_data = {
-            #"username": USERNAME,
-            "sadness": moodAnalysis['sadness'],
-            "joy": moodAnalysis['joy'],
-            "fear": moodAnalysis['fear'],
-            "disgust": moodAnalysis['disgust'],
-            "anger": moodAnalysis['anger'],
-            "eva_mood": ""
-        }
-    
+def genResponse(data, context_data={}):
+    global session_id
+
+    if not data :
+        return None
+
     try:
         response = assistant.message(
             assistant_id=assistant_id,
@@ -91,10 +81,30 @@ def genResponse(data):
             }
         ).get_result()
         #print(response)
+
     except Exception as e:
         print('genResponse Error: ', str(e))
+        session_id = createSession(assistant_id)
+        response = assistant.message(
+            assistant_id=assistant_id,
+            session_id=session_id,
+            input={
+                'message_type': 'text',
+                'text': data,
+                'options': {
+                    'return_context': True # For returning the context variables
+                }
+            },
+            context={
+                "skills": {
+                    "main skill": {
+                        "user_defined": context_data
+                    }
+                }
+            }
+        ).get_result()
     
-    else:
+    finally:
         final_response = '. '.join([resp['text'] for resp in response['output']['generic']])
         return final_response
 
