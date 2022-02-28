@@ -3,6 +3,7 @@ IBM
 Recuerda: chapuza del NOT #GENEnding porque adios era muy triste al parecer
 Arreglar lo del orden de las emociones si tienes dos > 0.5
 Quiza habria que mandar en el nodo un "no espero respuesta"(is_question) o algo asi, para finalizar la conversacion
+Deducir cuando se ha acabado la conversacion tras silencio incomodo?? ---> DEADLINE? volver arbol de ibm al principio
 
 OTROS
 lo de catch de la sessionm (patron singleton de la sesion) ---> crearla en estado listening para no crear delay en la primera respuesta
@@ -12,7 +13,7 @@ COrregir errores (de tipo try catch con cosas vacias y demas)
 quiza poner base de datos con el nombre y otras cosas fijas del usuario, y que se manden en la peticion en el contexto
 logging?
 quitar warnings del audio mic
-limpiar todo esto un poquito (comentarios, quiza sacar constantes a otro .py, o cosas asi,Organizar archivos )
+limpiar todo esto un poquito (comentarios, quiza sacar constantes a otro .py, o cosas asi,Organizar archivos, unificar nombres style )
 mirar modos de agresividad en lo de detectar silensio ---> a ver si podemos hacerlo mejor
 mirar el eje y en la activacion de wakeface
 hacer que grabe a 8 canales, haga la media y lo pase a 1
