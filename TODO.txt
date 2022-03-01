@@ -6,7 +6,6 @@ Quiza habria que mandar en el nodo un "no espero respuesta"(is_question) o algo 
 Deducir cuando se ha acabado la conversacion tras silencio incomodo?? ---> DEADLINE? volver arbol de ibm al principio
 
 OTROS
-lo de catch de la sessionm (patron singleton de la sesion) ---> crearla en estado listening para no crear delay en la primera respuesta
 PRoblema de mi codigo: solo habla cuando yo le hablo... necesidad de cambiar el código
 Ver a ver si consigo que las variables de entorno sirvan para pillas automaticamente las credenciales (o en su defecto el archivo como vairable de entorno)
 COrregir errores (de tipo try catch con cosas vacias y demas)
@@ -20,9 +19,17 @@ hacer que grabe a 8 canales, haga la media y lo pase a 1
 Si detecta alguna cara, pero este a distancia , pues ni puto caso (quitar falsos positivos cuando estas lejos), y asi puedo usar la back?? (no se)
 MIrar para poner la radio
 Arreglar ruido inicial microfono
+a veces pasa algo raro con los leds es verdad
+reconocimiento de cara
+deteccion de presencia + recordatorio
+
 
 
 DONES
+IBM
+- Dudas: la informacion de mood se lanza siempre???????
+OTROS
 - Limpiar git
 - AÑADIR AWAITS
-- Dudas: la informacion de mood se lanza siempre???????
+-lo de catch de la sessionm ---> crearla en estado listening para no crear delay en la primera respuesta
+cerrar sesion yo a X segundos

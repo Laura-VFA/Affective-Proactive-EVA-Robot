@@ -17,7 +17,7 @@ USERNAME = data['username']
 with open('../credentials/assistant_credentials.json') as json_file:
     auth_data = json.load(json_file)
 
-SESSION_TIME = 1 # in minutes
+SESSION_TIME = 20 # in seconds
 last_query_time = None
 session_id = ''
 assistant_id = auth_data['assistant_id']
@@ -96,4 +96,4 @@ def analyzeMood(text):
 
 def is_session_active(): # empty query to check if session is active
     global last_query_time
-    return last_query_time is not None and (datetime.now() - last_query_time).total_seconds() < SESSION_TIME * 60 
+    return last_query_time is not None and (datetime.now() - last_query_time).total_seconds() < SESSION_TIME 
