@@ -35,8 +35,8 @@ def mic_event_handler(event, audio=None):
     if event == 'stop_recording' and eva_state == 'recording':
         eva_state = 'processing_query'
         eva_led.set(Neutral())
-        audio_response = server.query(audio)
-        #audio_response = audio
+        #audio_response = server.query(audio)
+        audio_response = audio
 
         if audio_response:
             eva_state = 'speaking'

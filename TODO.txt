@@ -3,7 +3,6 @@ IBM
 Recuerda: chapuza del NOT #GENEnding porque adios era muy triste al parecer
 Arreglar lo del orden de las emociones si tienes dos > 0.5
 Quiza habria que mandar en el nodo un "no espero respuesta"(is_question) o algo asi, para finalizar la conversacion
-Deducir cuando se ha acabado la conversacion tras silencio incomodo?? ---> DEADLINE? volver arbol de ibm al principio
 
 OTROS
 PRoblema de mi codigo: solo habla cuando yo le hablo... necesidad de cambiar el código
@@ -22,12 +21,15 @@ Arreglar ruido inicial microfono
 a veces pasa algo raro con los leds es verdad
 reconocimiento de cara
 deteccion de presencia + recordatorio
+entrenar y sacar los pickles con tflite, no con haar
 
 
 
 DONES
 IBM
 - Dudas: la informacion de mood se lanza siempre???????
+- Deducir cuando se ha acabado la conversacion tras silencio incomodo?? ---> DEADLINE? volver arbol de ibm al principio
+
 OTROS
 - Limpiar git
 - AÑADIR AWAITS
