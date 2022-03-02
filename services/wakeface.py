@@ -40,7 +40,6 @@ class Wakeface:
         self.fps = FPS().start()
 
         someone_was_looking = False
-        is_first_time_look = False
 
         while not self.stopped.is_set():
             frames = self.pipeline.wait_for_frames()
@@ -78,29 +77,25 @@ class Wakeface:
                     if (xl + incr)  <= xn <= (xr - incr) :  # and yn >= max(yl, yr)
                         someone_looking = True
                         bboxes_looking.append(face.bbox.scale((w, h)))
-                        if not someone_was_looking:
-                            is_first_time_look = True
-                            #someone_was_looking = True
                         #break
   
                 if someone_looking : 
                     self.callback('face_listen')
 
-                    if is_first_time_look:
-                        # FACE RECOGNITION   
+                    if not someone_was_looking:
+                        # FACE RECOGNITION  
                         names = self.recognize(color_image, bboxes_looking)
                         print(names)
-                        is_first_time_look = False
 
                     someone_was_looking = True
 
                 else:
-                    self.callback('face_not_listen')   
-                    is_first_time_look = False 
+                    self.callback('face_not_listen') 
                     someone_was_looking = False      
                     
             else:
                 self.callback('not_faces')
+                someone_was_looking = False 
             
             self.fps.update()
     
