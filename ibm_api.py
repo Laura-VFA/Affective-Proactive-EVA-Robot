@@ -81,7 +81,9 @@ def genResponse(data, context_data={}):
     last_query_time = datetime.now()
 
     final_response = '. '.join([resp['text'] for resp in response['output']['generic']])
-    return final_response
+
+    action = ('record_face', 'laura')
+    return final_response, action
 
 
 def analyzeMood(text):

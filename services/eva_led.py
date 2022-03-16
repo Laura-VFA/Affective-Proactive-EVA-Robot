@@ -75,6 +75,20 @@ class Recording(LedState):
         led.set(self.bright[self.index : self.index + led.length])
         self.index = (self.index + 1) % led.length 
 
+class Recording_face(LedState):
+    def __init__(self):
+        super().__init__()
+        self.index = 0
+        interval = int(255 / led.length)
+
+        self.bright = [{'g': 255 - i * interval} for i in range(led.length)] * 2
+        
+
+    def update(self):
+
+        led.set(self.bright[self.index : self.index + led.length])
+        self.index = (self.index + 1) % led.length 
+
 class Breath(LedState):
     def __init__(self):
         super().__init__()

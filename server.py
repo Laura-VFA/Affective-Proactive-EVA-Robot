@@ -1,7 +1,7 @@
 from google_api import getTextFromSpeech, getSpeechFromText, translateEStoEN
 from ibm_api import genResponse, analyzeMood, is_session_active, createSession
 
-def query(audio_blob):
+def query(audio_blob, username=None):
     # STT
     text_query = getTextFromSpeech(audio_blob)
     print('L: ' + text_query)
@@ -13,18 +13,21 @@ def query(audio_blob):
 
     # Emotion Analysis
     context_variables = analyzeMood(translation) 
+    context_variables["username"] = username
     print(context_variables)
-    # TODO add username and other db variables
 
     # Generate the response
-    text_response = genResponse(text_query, context_variables)
+    text_response, action = genResponse(text_query, context_variables)
     print('E: ' + text_response)
 
     # TTS
     audio_response = getSpeechFromText(text_response)
 
     # Send back the response
-    return audio_response
+    return audio_response, action
+
+def tts(text):
+    return getSpeechFromText(text)
 
 def prepare():
     if not is_session_active():

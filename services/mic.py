@@ -97,6 +97,8 @@ class Recorder:
 
     def stop(self):
 
+        print( "* Mic closed ")
+
         self.stopped.set()
         self.start_recording.set()
         self.stop_recording.set()
