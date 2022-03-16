@@ -23,7 +23,7 @@ reconocimiento de cara
 deteccion de presencia + recordatorio
 entrenar y sacar los pickles con tflite, no con haar
 Hacer que se auto-genere los encodings cogiendo frames de la cara para registrar al usuario
-
+si no hay cara al principio de la ejecucion peta 
 
 DONES
 IBM

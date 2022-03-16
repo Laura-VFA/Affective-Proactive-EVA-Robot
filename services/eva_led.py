@@ -9,16 +9,43 @@ class LedState:
 
     def update(self):
         pass
-
+'''
 class Joy(LedState):
     def __init__(self):
         super().__init__()
         led.set('yellow')
+'''
+class Joy(LedState):
+    def __init__(self):
+        super().__init__()
+        self.interval = int(255 / led.length)
+        self.bright = [255 - i*self.interval for i in range(led.length)]
+        self.bright.extend(self.bright[::-1])
+        self.index = 0
 
+    def update(self):
+        led.set({'r': self.bright[self.index], 'g': self.bright[self.index]})
+        self.index = (self.index + 1) % len(self.bright)
+
+
+'''
 class Anger(LedState):
     def __init__(self):
         super().__init__()
         led.set('red')
+'''
+
+class Anger(LedState):
+    def __init__(self):
+        super().__init__()
+        self.interval = int(255 / led.length)
+        self.bright = [255 - i*self.interval for i in range(led.length)]
+        self.bright.extend(self.bright[::-1])
+        self.index = 0
+
+    def update(self):
+        led.set({'r': self.bright[self.index]})
+        self.index = (self.index + 1) % len(self.bright)
 
 class Listen(LedState):
     def __init__(self):

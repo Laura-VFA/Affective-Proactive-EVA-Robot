@@ -132,3 +132,6 @@ dmypy.json
 # Credentials
 ibm-credentials.env
 *credentials.json
+
+# Other
+*.pickle
