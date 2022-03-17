@@ -6,14 +6,15 @@ def query(audio_blob, username=None):
     text_query = getTextFromSpeech(audio_blob)
     print('L: ' + text_query)
     if not text_query:
-        return None
+        return None, None
 
     # Translation (for emotion analysis)
     translation = translateEStoEN(text_query)
 
-    # Emotion Analysis
+    # Emotion Analysis & other context variables
     context_variables = analyzeMood(translation) 
     context_variables["username"] = username
+    context_variables["action"] = None
     print(context_variables)
 
     # Generate the response

@@ -81,8 +81,8 @@ def genResponse(data, context_data={}):
     last_query_time = datetime.now()
 
     final_response = '. '.join([resp['text'] for resp in response['output']['generic']])
-
-    action = ('record_face', 'laura')
+    
+    action = (get_user_skill(response, 'action'), get_user_skill(response, 'username'))
     return final_response, action
 
 
@@ -99,3 +99,9 @@ def analyzeMood(text):
 def is_session_active(): # empty query to check if session is active
     global last_query_time
     return last_query_time is not None and (datetime.now() - last_query_time).total_seconds() < SESSION_TIME 
+
+def get_user_skill(response, skill):
+    if not skill in response['context']['skills']['main skill']['user_defined']:
+        return None
+
+    return response['context']['skills']['main skill']['user_defined'][skill]

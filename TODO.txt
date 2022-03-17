@@ -28,6 +28,7 @@ Hacer que se auto-genere los encodings cogiendo frames de la cara para registrar
 si no hay cara al principio de la ejecucion peta 
 si hay falsos unknown en una cara ya conocida no deberia preguntarte como te llamas otra vez :/
 progress bar guardando la cara simulada con los leds
+el is_question, gestionarlo aqui
 
 DONES
 IBM
