@@ -7,7 +7,7 @@ from services.mic import Recorder
 from services.speaker import Speaker
 
 
-def wf_event_handler(event, username=None):
+def wf_event_handler(event, username=None, progress=None):
     global eva_state, _username
     if event == 'face_listen' and eva_state in ['idle', 'recording_face']:
         eva_led.set(Listen())
@@ -27,6 +27,9 @@ def wf_event_handler(event, username=None):
 
         if event == 'not_faces':
             _username = None
+
+    elif event == 'recording_face':
+        eva_led.set(Progress(progress))
     
 
 def mic_event_handler(event, audio=None):
@@ -42,8 +45,8 @@ def mic_event_handler(event, audio=None):
     if event == 'stop_recording' and eva_state == 'recording':
         eva_state = 'processing_query'
         eva_led.set(Neutral())
-        #audio_response, action = server.query(audio, _username)
-        audio_response, action = audio, ('record_face', 'laura')
+        audio_response, action = server.query(audio, _username)
+        #audio_response, action = audio, ('record_face', 'laura')
 
         if audio_response:
             eva_state = 'speaking'
@@ -53,7 +56,7 @@ def mic_event_handler(event, audio=None):
         if action: # Execute associated action
             # Switch con tipos de acciones
             if action[0] == 'record_face':
-                eva_led.set(Recording_face())
+                #eva_led.set(Recording_face())
                 wf.record_face(action[1])
 
         eva_state = 'idle' # TEMPORAL

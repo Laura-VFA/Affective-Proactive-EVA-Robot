@@ -30,6 +30,8 @@ si hay falsos unknown en una cara ya conocida no deberia preguntarte como te lla
 progress bar guardando la cara simulada con los leds
 el is_question, gestionarlo aqui
 
+quiza lanzar otro hilo mientras se guarda la cara de alguien???'
+
 DONES
 IBM
 - Dudas: la informacion de mood se lanza siempre???????

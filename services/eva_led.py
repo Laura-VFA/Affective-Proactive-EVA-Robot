@@ -89,6 +89,13 @@ class Recording_face(LedState):
         led.set(self.bright[self.index : self.index + led.length])
         self.index = (self.index + 1) % led.length 
 
+class Progress(LedState):
+    def __init__(self, percentage=0):
+        super().__init__()
+        n_leds_light = int(percentage * led.length / 100)
+
+        led.set(['green']*n_leds_light)
+
 class Breath(LedState):
     def __init__(self):
         super().__init__()

@@ -82,7 +82,7 @@ class Wakeface:
                     # FACE RECOGNITION  
                     names = self.recognize(color_image, bboxes_looking)
 
-                    self.callback('face_listen', names[0])
+                    self.callback('face_listen', username=names[0])
                     
                 else:  # Someone looking and not first time
                     self.callback('face_listen')
@@ -191,6 +191,8 @@ class Wakeface:
                     self.dict_encodings['encodings'].append(encoding.tolist())
                     self.dict_encodings['names'].append(name)
                     counter += 1
+
+                    self.callback('recording_face', progress=counter*100/n_frames)
 
         self.pipeline.poll_for_frames()
         self.pipeline.stop()
