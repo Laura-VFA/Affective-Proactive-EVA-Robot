@@ -83,6 +83,7 @@ def genResponse(data, context_data={}):
     final_response = '. '.join([resp['text'] for resp in response['output']['generic']])
     
     action = (get_user_skill(response, 'action'), get_user_skill(response, 'username'))
+    print(action)
     return final_response, action
 
 

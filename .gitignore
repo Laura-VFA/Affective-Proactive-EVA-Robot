@@ -135,3 +135,6 @@ ibm-credentials.env
 
 # Other
 *.pickle
+
+# Logs
+.logs/

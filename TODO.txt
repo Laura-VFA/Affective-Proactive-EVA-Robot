@@ -3,7 +3,7 @@ IBM
 Recuerda: chapuza del NOT #GENEnding porque adios era muy triste al parecer
 Arreglar lo del orden de las emociones si tienes dos > 0.5
 Quiza habria que mandar en el nodo un "no espero respuesta"(is_question) o algo asi, para finalizar la conversacion
-Arreglar 'Soy Laura', que no me llamo 'Soy Laura'
+Arreglar 'Soy Laura', que no me llamo 'Soy Laura' (no hay annotations en español.... Expresion regular con primera letra mayuscula. Pero si Ángel lo coge como ángel pues no lo pilla como nombre)
 
 
 OTROS
@@ -23,16 +23,19 @@ Arreglar ruido inicial microfono
 a veces pasa algo raro con los leds es verdad
 reconocimiento de cara
 deteccion de presencia + recordatorio
-entrenar y sacar los pickles con tflite, no con haar
-Hacer que se auto-genere los encodings cogiendo frames de la cara para registrar al usuario
 si no hay cara al principio de la ejecucion peta 
 si hay falsos unknown en una cara ya conocida no deberia preguntarte como te llamas otra vez :/
-progress bar guardando la cara simulada con los leds
-el is_question, gestionarlo aqui
+
+
 
 quiza lanzar otro hilo mientras se guarda la cara de alguien???'
+pickle en lugar de json
+data aumentation de los frames de reconocimiento
+el is_question, gestionarlo aqui
+lanzar reconocimiento de cara en paralelo : y si hacemos que te reconozca en los 3 primeros frames? a veces falsos positivos
+si no ha hecho reconocimiento, por que soy alberto???????
 
-DONES
+------ DONES -------
 IBM
 - Dudas: la informacion de mood se lanza siempre???????
 - Deducir cuando se ha acabado la conversacion tras silencio incomodo?? ---> DEADLINE? volver arbol de ibm al principio
@@ -42,3 +45,6 @@ OTROS
 - AÑADIR AWAITS
 -lo de catch de la sessionm ---> crearla en estado listening para no crear delay en la primera respuesta
 cerrar sesion yo a X segundos
+- progress bar guardando la cara simulada con los leds
+- Hacer que se auto-genere los encodings cogiendo frames de la cara para registrar al usuario
+- entrenar y sacar los pickles con tflite, no con haar
