@@ -25,7 +25,7 @@ reconocimiento de cara
 deteccion de presencia + recordatorio
 si no hay cara al principio de la ejecucion peta 
 si hay falsos unknown en una cara ya conocida no deberia preguntarte como te llamas otra vez :/
-
+Poner los leds (y ojos) acorde al mood de eva 
 
 
 quiza lanzar otro hilo mientras se guarda la cara de alguien???'

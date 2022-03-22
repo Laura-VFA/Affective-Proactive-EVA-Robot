@@ -84,7 +84,9 @@ def genResponse(data, context_data={}):
     
     action = (get_user_skill(response, 'action'), get_user_skill(response, 'username'))
     print(action)
-    return final_response, action
+    continue_flag = bool(get_user_skill(response, 'continue'))
+    print('Continue', continue_flag)
+    return final_response, action, continue_flag
 
 
 def analyzeMood(text):

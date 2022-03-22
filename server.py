@@ -15,17 +15,18 @@ def query(audio_blob, username=None):
     context_variables = analyzeMood(translation) 
     context_variables["username"] = username
     context_variables["action"] = None
+    context_variables["continue"] = ""
     print(context_variables)
 
     # Generate the response
-    text_response, action = genResponse(text_query, context_variables)
+    text_response, action, continue_flag = genResponse(text_query, context_variables)
     print('E: ' + text_response)
 
     # TTS
     audio_response = getSpeechFromText(text_response)
 
     # Send back the response
-    return audio_response, action
+    return audio_response, action, continue_flag
 
 def tts(text):
     return getSpeechFromText(text)
