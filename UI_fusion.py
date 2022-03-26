@@ -2,7 +2,7 @@ import time
 import logging
 import server
 from services.eva_led import *
-from services.camera_service import Wakeface
+from services.camera_service import FaceDB, RecordFace, Wakeface
 from services.mic import Recorder
 from services.speaker import Speaker
 import queue
@@ -15,30 +15,33 @@ logging.basicConfig(filename='./logs/UI.log', format='%(asctime)s - %(levelname)
 
 notifications = queue.Queue()
 
-def wf_event_handler(event, username=None, progress=None):
+def wf_event_handler(event, username=None):
     global eva_context
-    notification = {
-        'transition': '',
-        'params': {
-            'progress': progress
-        }
-    }
-    if event == 'face_listen' and eva_context['state'] == 'idle':
-        notification['transition'] = 'idle2listening'
-        notifications.put(notification)
-    elif event in ['face_not_listen', 'not_faces'] and eva_context['state'] == 'listening':
-        notification['transition'] = 'listening2idle'
-        notifications.put(notification)
 
-        if event == 'not_faces':
-            eva_context['username'] = None
+    if event == 'face_listen' and eva_context['state'] == 'idle':
+        notifications.put({'transition': 'idle2listening'})
+    
+    elif event in ['face_not_listen', 'not_faces']:
+        eva_context['username'] = None
+
+        if eva_context['state'] == 'listening':
+            notifications.put({'transition': 'listening2idle'})
+
+        #if event == 'not_faces':
+        
     
     elif event == 'face_recognized':
         eva_context['username'] = username
 
-    elif event == 'recording_face':
-        notification['transition'] = 'recording_face'
-        notifications.put(notification)
+
+def rf_event_handler(event, progress=None):
+    if event == 'recording_face':
+        notifications.put({
+            'transition': 'recording_face', 
+            'params': {
+                'progress': progress
+            }
+        })
     
 
 def mic_event_handler(event, audio=None):
@@ -56,6 +59,7 @@ def mic_event_handler(event, audio=None):
         elif eva_context['state'] == 'listening_without_cam':
             notification['transition']  = 'listening_without_cam2recording'
         notifications.put(notification)
+
     if event == 'stop_recording' and eva_context['state'] == 'recording':
         notification['transition']  = 'recording2processingquery'
         notifications.put(notification)
@@ -94,16 +98,17 @@ def process_transition(transition, params):
         audio = params['audio']
 
         audio_response, action, continue_conversation = server.query(audio, eva_context['username'])
-    
-        if audio_response:
-            eva_context['state'] = 'speaking'
-            eva_led.set(Breath())
-            speaker.play(audio_response)
 
         if action: # Execute associated action
             # Switch con tipos de acciones
             if action[0] == 'record_face':
-                wf.record_face(action[1])
+                eva_context['username'] = action[1]
+                rf.start(action[1])
+
+        if audio_response:
+            eva_context['state'] = 'speaking'
+            eva_led.set(Breath())
+            speaker.play(audio_response)
         
         if continue_conversation:
             eva_led.set(Listen())
@@ -127,7 +132,9 @@ def process_transition(transition, params):
     
 
 eva_led = EvaLed()
+FaceDB.load()
 wf = Wakeface(wf_event_handler)
+rf = RecordFace(rf_event_handler)
 speaker = Speaker()
 mic = Recorder(mic_event_handler)
 eva_context = {'state':'idle', 'username':None}
@@ -141,13 +148,14 @@ try:
         notification = notifications.get()
         
         transition = notification['transition']
-        params = notification['params']
+        params = notification.get('params', {})
         process_transition(transition, params)
 except KeyboardInterrupt:
     pass
     
 
 wf.stop()
+rf.stop()
 mic.stop()
 speaker.destroy()
 eva_led.stop()

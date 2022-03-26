@@ -1,4 +1,3 @@
-# for face landmark detection
 import pickle
 import time
 from threading import Event, Thread
@@ -7,9 +6,6 @@ import queue
 
 import cv2
 import face_recognition
-import imutils
-import numpy as np
-import pyrealsense2.pyrealsense2 as rs
 from fdlite import FaceDetection, FaceDetectionModel, FaceIndex
 from imutils.video import FPS
 from PIL import Image
@@ -17,17 +13,34 @@ from .camera import Camera
 
 #dict_encodings = pickle.loads(open('./encodings.json', "r").read())
 
+class FaceDB:
+    dict_encodings = None
+    encodings_file = None
+
+    @staticmethod
+    def load(encodings_file='./encodings.json'):
+        FaceDB.encodings_file = encodings_file
+
+        with open(encodings_file) as json_file:
+            FaceDB.dict_encodings = json.load(json_file)
+    
+    @staticmethod
+    def dump():
+        with open(FaceDB.encodings_file, 'w') as json_file:
+            json.dump(FaceDB.dict_encodings, json_file)
+
+
+
 class CameraService:
     camera = None
     def __init__(self) -> None:
         if not CameraService.camera:
             CameraService.camera = Camera()
-        
 
 
 class Wakeface(CameraService):
-        
-    def __init__(self, callback, encodings_file='./encodings.json'):
+    
+    def __init__(self, callback):
         super().__init__()
 
         self.callback = callback
@@ -39,10 +52,7 @@ class Wakeface(CameraService):
         
         # load detection models
         self.detect_faces = FaceDetection(model_type=FaceDetectionModel.FRONT_CAMERA) # BACK_CAMERA FOR MORE RESOLUTION ; SHORT?
-
-        self.encodings_file = encodings_file
-        with open(encodings_file) as json_file:
-            self.dict_encodings = json.load(json_file)
+        
         
     def start(self):
 
@@ -154,7 +164,7 @@ class Wakeface(CameraService):
         for encoding in encodings:
             # attempt to match each face in the input image to our known
             # encodings
-            matches = face_recognition.compare_faces(self.dict_encodings["encodings"],
+            matches = face_recognition.compare_faces(FaceDB.dict_encodings["encodings"],
                 encoding)
             name = None
             # check to see if we have found a match
@@ -167,7 +177,7 @@ class Wakeface(CameraService):
                 # loop over the matched indexes and maintain a count for
                 # each recognized face face
                 for i in matchedIdxs:
-                    name = self.dict_encodings["names"][i]
+                    name = FaceDB.dict_encodings["names"][i]
                     counts[name] = counts.get(name, 0) + 1
                 # determine the recognized face with the largest number
                 # of votes (note: in the event of an unlikely tie Python
@@ -181,7 +191,7 @@ class Wakeface(CameraService):
     
 
 class RecordFace(CameraService):
-    def __init__(self, callback, encodings_file='./encodings.json'):
+    def __init__(self, callback):
         self.callback = callback
         self.stopped = Event()
         self._thread = None
@@ -189,14 +199,11 @@ class RecordFace(CameraService):
         # load detection models
         self.detect_faces = FaceDetection(model_type=FaceDetectionModel.FRONT_CAMERA) # BACK_CAMERA FOR MORE RESOLUTION ; SHORT?
 
-        self.encodings_file = encodings_file
-        with open(encodings_file) as json_file:
-            self.dict_encodings = json.load(json_file)
         
-    def start(self):
+    def start(self, name):
 
         self.stopped.clear()
-        self._thread = Thread(target=self._run)
+        self._thread = Thread(target=self._run, args=(name,))
         self._thread.start()
     
     def _run(self, name, n_frames=6):
@@ -204,17 +211,15 @@ class RecordFace(CameraService):
         CameraService.camera.start(self.__class__.__name__)
         
         counter = 0
-        while counter < n_frames:
+        while counter < n_frames and not self.stopped.is_set():
             print('recording frame!!')
             # Get frame
-            frames = self.pipeline.wait_for_frames()
-            color_image = np.asanyarray(frames.get_color_frame().get_data())
-            color_image = imutils.resize(color_image, width=500)
-            (h, w) = color_image.shape[:2]
+            frame = CameraService.camera.get_color_frame(resize=True)
+            (h, w) = frame.shape[:2]
 
             # Detect faces
             face_detections = self.detect_faces(
-                Image.fromarray(cv2.cvtColor(color_image, cv2.COLOR_BGR2RGB))
+                Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
             )
 
             if face_detections:
@@ -231,16 +236,17 @@ class RecordFace(CameraService):
                     boxes = [(int(box.ymin), int(box.xmax), int(box.ymax), int(box.xmin)) for box in bboxes_looking]
                     
                     # compute the facial embeddings for each face bounding box
-                    encodings = face_recognition.face_encodings(color_image, boxes)
+                    encodings = face_recognition.face_encodings(frame, boxes)
                     encoding = encodings[0]
-                    self.dict_encodings['encodings'].append(encoding.tolist())
-                    self.dict_encodings['names'].append(name)
+                    FaceDB.dict_encodings['encodings'].append(encoding.tolist())
+                    FaceDB.dict_encodings['names'].append(name)
                     counter += 1
 
                     self.callback('recording_face', progress=counter*100/n_frames)
 
-        with open(self.encodings_file, 'w') as json_file:
-            json.dump(self.dict_encodings, json_file)
+        FaceDB.dump()
+        
+        CameraService.camera.stop(self.__class__.__name__)
 
 
     def stop(self):
@@ -248,11 +254,7 @@ class RecordFace(CameraService):
         if self._thread is not None and self._thread.is_alive():
             self._thread.join()
 
-        CameraService.camera.stop(self.__class__.__name__)
 
-        self.fps.stop()
-        print("[INFO] elasped time: {:.2f}".format(self.fps.elapsed()))
-        print("[INFO] approx. FPS: {:.2f}".format(self.fps.fps()))
 
         
 class PresenceDetector(CameraService):
