@@ -33,6 +33,7 @@ data aumentation de los frames de reconocimiento
 el is_question, gestionarlo aqui
 implementar el timeout del listening
 lanzar reconocimiento de cara en paralelo : y si hacemos que te reconozca en los 3 primeros frames? a veces falsos positivos
+poner diccionario de stado-color leds???
 
 ------ DONES -------
 IBM

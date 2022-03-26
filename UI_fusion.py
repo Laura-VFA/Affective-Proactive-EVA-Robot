@@ -26,10 +26,7 @@ def wf_event_handler(event, username=None):
 
         if eva_context['state'] == 'listening':
             notifications.put({'transition': 'listening2idle'})
-
-        #if event == 'not_faces':
         
-    
     elif event == 'face_recognized':
         eva_context['username'] = username
 
@@ -63,7 +60,17 @@ def mic_event_handler(event, audio=None):
     if event == 'stop_recording' and eva_context['state'] == 'recording':
         notification['transition']  = 'recording2processingquery'
         notifications.put(notification)
-    
+
+
+def speaker_event_handler(event):
+    global eva_context
+    if event == 'finish_speak':
+        if eva_context['continue_conversation']:
+            
+            notifications.put({'transition': 'speaking2listening_without_cam'})
+        
+        else:
+            notifications.put({'transition': 'speaking2idle'})
 
 def process_transition(transition, params):
     global eva_context
@@ -99,6 +106,8 @@ def process_transition(transition, params):
 
         audio_response, action, continue_conversation = server.query(audio, eva_context['username'])
 
+        eva_context['continue_conversation'] = continue_conversation
+
         if action: # Execute associated action
             # Switch con tipos de acciones
             if action[0] == 'record_face':
@@ -108,23 +117,36 @@ def process_transition(transition, params):
         if audio_response:
             eva_context['state'] = 'speaking'
             eva_led.set(Breath())
-            speaker.play(audio_response)
-        
-        if continue_conversation:
-            eva_led.set(Listen())
-            eva_context['state'] = 'listening_without_cam'
-            mic.start()
-
-            # Add a timeout to execute a transition funcion
-            # Interruption
-
-        else:   
-            eva_context['state'] = 'idle' 
+            speaker.start(audio_response)
+        else:
             eva_led.set(Neutral())
+            eva_context['state'] = 'idle'
             wf.start()
-    
+
+    elif transition == 'speaking2listening_without_cam':
+        eva_context['state'] = 'listening_without_cam'
+        eva_led.set(Listen())
+        mic.start()
+
+        # Add a timeout to execute a transition funcion
+        # Interruption
+
+    elif transition == 'speaking2idle':
+        eva_context['state'] = 'idle' 
+        eva_led.set(Neutral())
+        wf.start()
+
     elif transition == 'recording_face':
         eva_led.set(Progress(params['progress']))
+
+        if params['progress'] == 100:
+            if eva_context['state'] == 'listening_without_cam':
+                eva_led.set(Listen())
+            elif eva_context['state'] == 'recording':
+                eva_led.set(Recording())
+            else:
+                eva_led.set(Neutral())
+
     
 
 
@@ -135,9 +157,9 @@ eva_led = EvaLed()
 FaceDB.load()
 wf = Wakeface(wf_event_handler)
 rf = RecordFace(rf_event_handler)
-speaker = Speaker()
+speaker = Speaker(speaker_event_handler)
 mic = Recorder(mic_event_handler)
-eva_context = {'state':'idle', 'username':None}
+eva_context = {'state':'idle', 'username':None, 'continue_conversation': False}
 wf.start()
 
 
