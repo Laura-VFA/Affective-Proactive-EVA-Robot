@@ -3,6 +3,7 @@ import pickle
 import time
 from threading import Event, Thread
 import json
+import queue
 
 import cv2
 import face_recognition
@@ -12,21 +13,29 @@ import pyrealsense2.pyrealsense2 as rs
 from fdlite import FaceDetection, FaceDetectionModel, FaceIndex
 from imutils.video import FPS
 from PIL import Image
+from .camera import Camera
 
 #dict_encodings = pickle.loads(open('./encodings.json', "r").read())
 
+class CameraService:
+    camera = None
+    def __init__(self) -> None:
+        if not CameraService.camera:
+            CameraService.camera = Camera()
+        
 
 
-
-class Wakeface:
+class Wakeface(CameraService):
+        
     def __init__(self, callback, encodings_file='./encodings.json'):
+        super().__init__()
+
         self.callback = callback
         self.stopped = Event()
-        self._thread = None
+        self._thread_wakeface = None
+        self._thread_recognizer = None
 
-        self.pipeline = rs.pipeline()
-        self.config = rs.config()
-        self.config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
+        self.face_queue = None
         
         # load detection models
         self.detect_faces = FaceDetection(model_type=FaceDetectionModel.FRONT_CAMERA) # BACK_CAMERA FOR MORE RESOLUTION ; SHORT?
@@ -36,33 +45,35 @@ class Wakeface:
             self.dict_encodings = json.load(json_file)
         
     def start(self):
-        print("[INFO] starting video stream...")
-        # Start streaming
-        self.pipeline.start(self.config)
 
         self.stopped.clear()
-        self._thread = Thread(target=self._run)
-        self._thread.start()
+        self._thread_wakeface = Thread(target=self._run)
+        self._thread_recognizer = Thread(target=self._run_recognize)
+        self._thread_wakeface.start()
+        self._thread_recognizer.start()
+        
     
     def _run(self):
+
+        CameraService.camera.start(self.__class__.__name__)
+
         self.fps = FPS().start()
 
         someone_was_looking = False
 
         while not self.stopped.is_set():
             # Get frame
-            frames = self.pipeline.wait_for_frames()
-            color_image = np.asanyarray(frames.get_color_frame().get_data())
-            color_image = imutils.resize(color_image, width=500)
-            (h, w) = color_image.shape[:2]
+            frame = CameraService.camera.get_color_frame(resize=True)
+            (h, w) = frame.shape[:2]
 
             # Detect faces
             face_detections = self.detect_faces(
-                Image.fromarray(cv2.cvtColor(color_image, cv2.COLOR_BGR2RGB))
+                Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
             )
             
             if not face_detections :
                 self.callback('not_faces')
+                while not self.face_queue.empty(): self.face_queue.get(block=True)
                 someone_was_looking = False 
 
             else:
@@ -74,28 +85,33 @@ class Wakeface:
   
                 if not bboxes_looking : # No one looking
                     self.callback('face_not_listen') 
+                    while not self.face_queue.empty(): self.face_queue.get(block=False)
                     someone_was_looking = False   
- 
-                elif not someone_was_looking: # Someone looking the first time
-                    someone_was_looking = True
 
-                    # FACE RECOGNITION  
-                    names = self.recognize(color_image, bboxes_looking)
-
-                    self.callback('face_listen', username=names[0])
-                    
-                else:  # Someone looking and not first time
+                else:
                     self.callback('face_listen')
 
+                    if not someone_was_looking: # Someone looking the first time
+                        someone_was_looking = True
+
+                        # FACE RECOGNITION  
+                        self.face_queue.put({
+                            'frame': frame,
+                            'bboxes_looking': bboxes_looking
+                        })
+                
             self.fps.update()
     
     def stop(self):
         self.stopped.set()
-        if self._thread is not None and self._thread.is_alive():
-            self._thread.join()
+        if self._thread_recognizer is not None and self._thread_recognizer.is_alive():
+            self._thread_recognizer.join()
+        
+        if self._thread_wakeface is not None and self._thread_wakeface.is_alive():
+            self._thread_wakeface.join()
 
-        self.pipeline.poll_for_frames()
-        self.pipeline.stop()
+        CameraService.camera.stop(self.__class__.__name__)
+
         self.fps.stop()
         print("[INFO] elasped time: {:.2f}".format(self.fps.elapsed()))
         print("[INFO] approx. FPS: {:.2f}".format(self.fps.fps()))
@@ -114,10 +130,21 @@ class Wakeface:
 
         # Interval checking
         return (xl + incr)  <= xn <= (xr - incr)  # and yn >= max(yl, yr)
+
+    def _run_recognize(self):
+        self.face_queue = queue.Queue()
+
+        while not self.stopped.is_set():
+            try:
+                recognition_params = self.face_queue.get(timeout=.5)
+            except queue.Empty:
+                continue
+            
+            names = self.recognize(**recognition_params)
+            self.callback('face_recognized', username=names[0])
         
     # https://pyimagesearch.com/2018/06/25/raspberry-pi-face-recognition/
     def recognize(self, frame, bboxes_looking):
-        # FACE RECOGNITION   
         boxes = [(int(box.ymin), int(box.xmax), int(box.ymax), int(box.xmin)) for box in bboxes_looking]
         
         # compute the facial embeddings for each face bounding box
@@ -151,13 +178,31 @@ class Wakeface:
             names.append(name)
         
         return names
+    
 
-    def record_face(self, name, n_frames=6):
+class RecordFace(CameraService):
+    def __init__(self, callback, encodings_file='./encodings.json'):
+        self.callback = callback
+        self.stopped = Event()
+        self._thread = None
+        
+        # load detection models
+        self.detect_faces = FaceDetection(model_type=FaceDetectionModel.FRONT_CAMERA) # BACK_CAMERA FOR MORE RESOLUTION ; SHORT?
 
-        print("[INFO] starting video stream...")
-        # Start streaming
-        self.pipeline.start(self.config)
+        self.encodings_file = encodings_file
+        with open(encodings_file) as json_file:
+            self.dict_encodings = json.load(json_file)
+        
+    def start(self):
 
+        self.stopped.clear()
+        self._thread = Thread(target=self._run)
+        self._thread.start()
+    
+    def _run(self, name, n_frames=6):
+
+        CameraService.camera.start(self.__class__.__name__)
+        
         counter = 0
         while counter < n_frames:
             print('recording frame!!')
@@ -194,8 +239,21 @@ class Wakeface:
 
                     self.callback('recording_face', progress=counter*100/n_frames)
 
-        self.pipeline.poll_for_frames()
-        self.pipeline.stop()
-
         with open(self.encodings_file, 'w') as json_file:
             json.dump(self.dict_encodings, json_file)
+
+
+    def stop(self):
+        self.stopped.set()
+        if self._thread is not None and self._thread.is_alive():
+            self._thread.join()
+
+        CameraService.camera.stop(self.__class__.__name__)
+
+        self.fps.stop()
+        print("[INFO] elasped time: {:.2f}".format(self.fps.elapsed()))
+        print("[INFO] approx. FPS: {:.2f}".format(self.fps.fps()))
+
+        
+class PresenceDetector(CameraService):
+    pass
