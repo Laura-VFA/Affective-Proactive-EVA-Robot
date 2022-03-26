@@ -97,7 +97,7 @@ def process_transition(transition, params):
         audio = params['audio']
 
         audio_response, action, continue_conversation = server.query(audio, _username)
-
+    
         if audio_response:
             eva_state = 'speaking'
             eva_led.set(Breath())
@@ -112,6 +112,9 @@ def process_transition(transition, params):
             eva_led.set(Listen())
             eva_state = 'listening_without_cam'
             mic.start()
+
+            # Add a timeout to execute a transition funcion
+            # Interruption
 
         else:   
             eva_state = 'idle' 

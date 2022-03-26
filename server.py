@@ -6,7 +6,7 @@ def query(audio_blob, username=None):
     text_query = getTextFromSpeech(audio_blob)
     print('L: ' + text_query)
     if not text_query:
-        return None, None
+        return None, None, None
 
     # Translation (for emotion analysis)
     translation = translateEStoEN(text_query)
