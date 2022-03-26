@@ -75,29 +75,29 @@ def speaker_event_handler(event):
 def process_transition(transition, params):
     global eva_context
 
-    if transition == 'idle2listening':
+    if transition == 'idle2listening' and eva_context['state'] == 'idle':
         eva_led.set(Listen())
         eva_context['state'] = 'listening'
         mic.start()
 
-    elif transition == 'listening2idle':
+    elif transition == 'listening2idle' and eva_context['state'] == 'listening':
         eva_led.set(Neutral())
         eva_context['state'] = 'idle'
         mic.stop()
 
-    elif transition == 'listening2recording':
+    elif transition == 'listening2recording' and eva_context['state'] == 'listening':
         eva_context['state'] = 'recording'
         eva_led.set(Recording())
         server.prepare()
         #disconnect camera
         wf.stop()
     
-    elif transition == 'listening_without_cam2recording':
+    elif transition == 'listening_without_cam2recording' and eva_context['state'] == 'listening_without_cam':
         eva_context['state'] = 'recording'
         eva_led.set(Recording())
         server.prepare()
 
-    elif transition == 'recording2processingquery':
+    elif transition == 'recording2processingquery' and eva_context['state'] == 'recording':
         eva_context['state'] = 'processing_query'
         eva_led.set(Neutral())
         mic.stop()
@@ -123,7 +123,7 @@ def process_transition(transition, params):
             eva_context['state'] = 'idle'
             wf.start()
 
-    elif transition == 'speaking2listening_without_cam':
+    elif transition == 'speaking2listening_without_cam' and eva_context['state'] == 'speaking':
         eva_context['state'] = 'listening_without_cam'
         eva_led.set(Listen())
         mic.start()
@@ -131,7 +131,7 @@ def process_transition(transition, params):
         # Add a timeout to execute a transition funcion
         # Interruption
 
-    elif transition == 'speaking2idle':
+    elif transition == 'speaking2idle' and eva_context['state'] == 'speaking':
         eva_context['state'] = 'idle' 
         eva_led.set(Neutral())
         wf.start()
