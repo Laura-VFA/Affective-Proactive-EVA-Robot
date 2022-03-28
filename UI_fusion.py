@@ -152,7 +152,7 @@ def process_transition(transition, params):
     
     elif transition == 'listening_without_cam2idle'and eva_context['state'] == 'listening_without_cam':
         eva_context['state'] = 'idle'
-        eva_led.set(Neutral())
+        eva_led.set(Close())
         mic.stop()
         wf.start()
     

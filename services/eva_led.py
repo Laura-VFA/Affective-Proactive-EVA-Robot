@@ -9,12 +9,8 @@ class LedState:
 
     def update(self):
         pass
-'''
-class Joy(LedState):
-    def __init__(self):
-        super().__init__()
-        led.set('yellow')
-'''
+
+# Mood leds
 class Joy(LedState):
     def __init__(self):
         super().__init__()
@@ -26,14 +22,6 @@ class Joy(LedState):
     def update(self):
         led.set({'r': self.bright[self.index], 'g': self.bright[self.index]})
         self.index = (self.index + 1) % len(self.bright)
-
-
-'''
-class Anger(LedState):
-    def __init__(self):
-        super().__init__()
-        led.set('red')
-'''
 
 class Anger(LedState):
     def __init__(self):
@@ -47,6 +35,7 @@ class Anger(LedState):
         led.set({'r': self.bright[self.index]})
         self.index = (self.index + 1) % len(self.bright)
 
+# Action leds
 class Listen(LedState):
     def __init__(self):
         super().__init__()
@@ -99,6 +88,18 @@ class Neutral(LedState):
     def __init__(self):
         super().__init__()
         led.set('black')
+
+class Close(LedState):
+    def __init__(self):
+        super().__init__()
+        self.array = ['purple']*led.length
+        led.set(self.array)
+        
+
+    def update(self):
+        if self.array:
+            self.array.pop()
+            led.set(self.array)
 
 class Rainbow(LedState):
 
