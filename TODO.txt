@@ -35,6 +35,7 @@ implementar el timeout del listening
 lanzar reconocimiento de cara en paralelo : y si hacemos que te reconozca en los 3 primeros frames? a veces falsos positivos
 poner diccionario de stado-color leds???
 si stt es vacio, devolver un continue_conversation dependiendo de la conversacion y de si te ha reconocido
+el timeout necesita que cierre la sesion de ibm
 
 ------ DONES -------
 IBM

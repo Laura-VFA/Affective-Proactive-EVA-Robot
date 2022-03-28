@@ -1,12 +1,13 @@
-import time
 import logging
+import queue
+import threading
+import time
+
 import server
-from services.eva_led import *
 from services.camera_service import FaceDB, RecordFace, Wakeface
+from services.eva_led import *
 from services.mic import Recorder
 from services.speaker import Speaker
-import queue
-
 
 # Logging configuration
 logging.basicConfig(filename='./logs/UI.log', format='%(asctime)s - %(levelname)s - %(name)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S', level=logging.INFO)
@@ -14,6 +15,9 @@ logging.basicConfig(filename='./logs/UI.log', format='%(asctime)s - %(levelname)
 
 
 notifications = queue.Queue()
+listen_timer = None
+DELAY_TIMEOUT = 5 # in sec
+
 
 def wf_event_handler(event, username=None):
     global eva_context
@@ -72,8 +76,15 @@ def speaker_event_handler(event):
         else:
             notifications.put({'transition': 'speaking2idle'})
 
-def process_transition(transition, params):
+
+
+def listen_timeout_handler():
     global eva_context
+    notifications.put({'transition': 'listening_without_cam2idle'})
+
+
+def process_transition(transition, params):
+    global eva_context, listen_timer
 
     if transition == 'idle2listening' and eva_context['state'] == 'idle':
         eva_led.set(Listen())
@@ -96,6 +107,8 @@ def process_transition(transition, params):
         eva_context['state'] = 'recording'
         eva_led.set(Recording())
         server.prepare()
+
+        listen_timer.cancel()
 
     elif transition == 'recording2processingquery' and eva_context['state'] == 'recording':
         eva_context['state'] = 'processing_query'
@@ -128,13 +141,21 @@ def process_transition(transition, params):
         eva_led.set(Listen())
         mic.start()
 
-        # Add a timeout to execute a transition funcion
-        # Interruption
+        # Add a timeout to execute a transition funcion due to inactivity
+        listen_timer = threading.Timer(DELAY_TIMEOUT, listen_timeout_handler)
+        listen_timer.start()
 
     elif transition == 'speaking2idle' and eva_context['state'] == 'speaking':
         eva_context['state'] = 'idle' 
         eva_led.set(Neutral())
         wf.start()
+    
+    elif transition == 'listening_without_cam2idle'and eva_context['state'] == 'listening_without_cam':
+        eva_context['state'] = 'idle'
+        eva_led.set(Neutral())
+        mic.stop()
+        wf.start()
+    
 
     elif transition == 'recording_face':
         eva_led.set(Progress(params['progress']))
