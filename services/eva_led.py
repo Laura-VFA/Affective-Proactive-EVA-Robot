@@ -92,7 +92,7 @@ class Neutral(LedState):
 class Close(LedState):
     def __init__(self):
         super().__init__()
-        self.array = ['purple']*led.length
+        self.array = ['blue']*led.length
         led.set(self.array)
         
 
