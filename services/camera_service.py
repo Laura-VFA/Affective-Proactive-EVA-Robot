@@ -10,6 +10,8 @@ from fdlite import FaceDetection, FaceDetectionModel, FaceIndex
 from imutils.video import FPS
 from PIL import Image
 from .camera import Camera
+from .presence_detector.object_detector import ObjectDetector
+from .presence_detector.object_detector import ObjectDetectorOptions
 
 #dict_encodings = pickle.loads(open('./encodings.json', "r").read())
 
@@ -192,6 +194,8 @@ class Wakeface(CameraService):
 
 class RecordFace(CameraService):
     def __init__(self, callback):
+        super().__init__()
+
         self.callback = callback
         self.stopped = Event()
         self._thread = None
@@ -258,4 +262,63 @@ class RecordFace(CameraService):
 
         
 class PresenceDetector(CameraService):
-    pass
+    # Based on:
+    # Copyright 2021 The TensorFlow Authors. All Rights Reserved.
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+
+    def __init__(self, callback, model='./presence_detector/efficientdet_lite0.tflite', 
+                    num_threads=1) -> None:
+
+        super().__init__()
+
+        self.callback = callback
+        self.stopped = Event()
+        self._thread = None
+
+          # Initialize the object detection model
+        options = ObjectDetectorOptions(
+            num_threads=num_threads,
+            score_threshold=0.3,
+            max_results=3,
+            label_allow_list = ['person']
+        )
+        self.detector = ObjectDetector(model_path=model, options=options)
+    
+    def start(self):
+
+        self.stopped.clear()
+        self._thread = Thread(target=self._run)
+        self._thread.start()
+    
+    def _run(self):
+        CameraService.camera.start(self.__class__.__name__)
+        while not self.stopped.is_set():
+            frame = CameraService.camera.get_color_frame(resize=True)
+
+            # Run object detection estimation using the model.
+            detections = self.detector.detect(frame)
+
+            if detections:
+                self.callback('person_detected')
+            else:
+                self.callback('empty_room')
+
+
+    def stop(self):
+        self.stopped.set()
+        if self._thread is not None and self._thread.is_alive():
+            self._thread.join()
+        
+        CameraService.camera.stop(self.__class__.__name__)
+
