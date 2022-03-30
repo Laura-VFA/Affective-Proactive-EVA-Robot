@@ -7,7 +7,6 @@ import queue
 import cv2
 import face_recognition
 from fdlite import FaceDetection, FaceDetectionModel, FaceIndex
-from imutils.video import FPS
 from PIL import Image
 from .camera import Camera
 from .presence_detector.object_detector import ObjectDetector
@@ -69,8 +68,6 @@ class Wakeface(CameraService):
 
         CameraService.camera.start(self.__class__.__name__)
 
-        self.fps = FPS().start()
-
         someone_was_looking = False
 
         while not self.stopped.is_set():
@@ -112,7 +109,6 @@ class Wakeface(CameraService):
                             'bboxes_looking': bboxes_looking
                         })
                 
-            self.fps.update()
     
     def stop(self):
         self.stopped.set()
@@ -123,10 +119,6 @@ class Wakeface(CameraService):
             self._thread_wakeface.join()
 
         CameraService.camera.stop(self.__class__.__name__)
-
-        self.fps.stop()
-        print("[INFO] elasped time: {:.2f}".format(self.fps.elapsed()))
-        print("[INFO] approx. FPS: {:.2f}".format(self.fps.fps()))
 
     @staticmethod
     def check_looking(face, incr=0.25):
@@ -277,7 +269,7 @@ class PresenceDetector(CameraService):
     # See the License for the specific language governing permissions and
     # limitations under the License.
 
-    def __init__(self, callback, model='./presence_detector/efficientdet_lite0.tflite', 
+    def __init__(self, callback, model='./services/presence_detector/efficientdet_lite0.tflite', 
                     num_threads=1) -> None:
 
         super().__init__()

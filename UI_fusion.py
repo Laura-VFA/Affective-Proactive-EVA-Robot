@@ -4,7 +4,7 @@ import threading
 import time
 
 import server
-from services.camera_service import FaceDB, RecordFace, Wakeface
+from services.camera_service import FaceDB, PresenceDetector, RecordFace, Wakeface
 from services.eva_led import *
 from services.mic import Recorder
 from services.speaker import Speaker
@@ -22,14 +22,14 @@ DELAY_TIMEOUT = 5 # in sec
 def wf_event_handler(event, username=None):
     global eva_context
 
-    if event == 'face_listen' and eva_context['state'] == 'idle':
-        notifications.put({'transition': 'idle2listening'})
+    if event == 'face_listen' and eva_context['state'] == 'idle_presence':
+        notifications.put({'transition': 'idle_presence2listening'})
     
     elif event in ['face_not_listen', 'not_faces']:
         eva_context['username'] = None
 
         if eva_context['state'] == 'listening':
-            notifications.put({'transition': 'listening2idle'})
+            notifications.put({'transition': 'listening2idle_presence'})
         
     elif event == 'face_recognized':
         eva_context['username'] = username
@@ -43,6 +43,13 @@ def rf_event_handler(event, progress=None):
                 'progress': progress
             }
         })
+
+def pd_event_handler(event):
+    if event == 'person_detected' and eva_context['state'] == 'idle' :
+        notifications.put({'transition': 'idle2idle_presence'})
+    
+    elif event == 'empty_room'  and eva_context['state'] == 'idle_presence' :
+        notifications.put({'transition': 'idle_presence2idle'})
     
 
 def mic_event_handler(event, audio=None):
@@ -74,27 +81,39 @@ def speaker_event_handler(event):
             notifications.put({'transition': 'speaking2listening_without_cam'})
         
         else:
-            notifications.put({'transition': 'speaking2idle'})
+            notifications.put({'transition': 'speaking2idle_presence'})
 
 
 
 def listen_timeout_handler():
     global eva_context
-    notifications.put({'transition': 'listening_without_cam2idle'})
+    notifications.put({'transition': 'listening_without_cam2idle_presence'})
 
 
 def process_transition(transition, params):
     global eva_context, listen_timer
 
-    if transition == 'idle2listening' and eva_context['state'] == 'idle':
-        eva_led.set(Listen())
-        eva_context['state'] = 'listening'
-        mic.start()
-
-    elif transition == 'listening2idle' and eva_context['state'] == 'listening':
+    if transition == 'idle2idle_presence' and eva_context['state'] == 'idle':
+        eva_led.set(StaticColor('purple'))
+        eva_context['state'] = 'idle_presence'
+        wf.start()
+    
+    if transition == 'idle_presence2idle' and eva_context['state'] == 'idle_presence':
         eva_led.set(Neutral())
         eva_context['state'] = 'idle'
+        wf.stop()
+
+    if transition == 'idle_presence2listening' and eva_context['state'] == 'idle_presence':
+        eva_led.set(Listen())
+        eva_context['state'] = 'listening'
+        pd.stop()
+        mic.start()
+
+    elif transition == 'listening2idle_presence' and eva_context['state'] == 'listening':
+        eva_led.set(Neutral())
+        eva_context['state'] = 'idle_presence'
         mic.stop()
+        pd.start()
 
     elif transition == 'listening2recording' and eva_context['state'] == 'listening':
         eva_context['state'] = 'recording'
@@ -133,7 +152,8 @@ def process_transition(transition, params):
             speaker.start(audio_response)
         else:
             eva_led.set(Neutral())
-            eva_context['state'] = 'idle'
+            eva_context['state'] = 'idle_presence'
+            pd.start()
             wf.start()
 
     elif transition == 'speaking2listening_without_cam' and eva_context['state'] == 'speaking':
@@ -145,15 +165,17 @@ def process_transition(transition, params):
         listen_timer = threading.Timer(DELAY_TIMEOUT, listen_timeout_handler)
         listen_timer.start()
 
-    elif transition == 'speaking2idle' and eva_context['state'] == 'speaking':
-        eva_context['state'] = 'idle' 
+    elif transition == 'speaking2idle_presence' and eva_context['state'] == 'speaking':
+        eva_context['state'] = 'idle_presence' 
         eva_led.set(Neutral())
+        pd.start()
         wf.start()
     
-    elif transition == 'listening_without_cam2idle'and eva_context['state'] == 'listening_without_cam':
-        eva_context['state'] = 'idle'
+    elif transition == 'listening_without_cam2idle_presence'and eva_context['state'] == 'listening_without_cam':
+        eva_context['state'] = 'idle_presence'
         eva_led.set(Close())
         mic.stop()
+        pd.start()
         wf.start()
     
 
@@ -176,12 +198,18 @@ def process_transition(transition, params):
 
 eva_led = EvaLed()
 FaceDB.load()
+
 wf = Wakeface(wf_event_handler)
 rf = RecordFace(rf_event_handler)
+pd = PresenceDetector(pd_event_handler)
+
 speaker = Speaker(speaker_event_handler)
 mic = Recorder(mic_event_handler)
+
 eva_context = {'state':'idle', 'username':None, 'continue_conversation': False}
-wf.start()
+#wf.start()
+pd.start()
+
 
 
 print('Start!')
@@ -199,6 +227,7 @@ except KeyboardInterrupt:
 
 wf.stop()
 rf.stop()
+pd.stop()
 mic.stop()
 speaker.destroy()
 eva_led.stop()

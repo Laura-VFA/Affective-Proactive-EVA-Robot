@@ -36,6 +36,8 @@ lanzar reconocimiento de cara en paralelo : y si hacemos que te reconozca en los
 poner diccionario de stado-color leds???
 si stt es vacio, devolver un continue_conversation dependiendo de la conversacion y de si te ha reconocido
 el timeout necesita que cierre la sesion de ibm
+encender wakeface solo si estas a x distancia de la camara
+Poner mutex a la lista de servicios de la camara
 
 ------ DONES -------
 IBM

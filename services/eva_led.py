@@ -89,6 +89,11 @@ class Neutral(LedState):
         super().__init__()
         led.set('black')
 
+class StaticColor(LedState):
+    def __init__(self, color:str):
+        super().__init__()
+        led.set(color)
+
 class Close(LedState):
     def __init__(self):
         super().__init__()
