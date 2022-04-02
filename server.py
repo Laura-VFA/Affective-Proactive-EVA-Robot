@@ -1,7 +1,7 @@
 from google_api import getTextFromSpeech, getSpeechFromText, translateEStoEN
 from ibm_api import genResponse, analyzeMood, is_session_active, createSession
 
-def query(audio_blob, username=None):
+def query(audio_blob, username=None, proactive_question=''):
     # STT
     text_query = getTextFromSpeech(audio_blob)
     print('L: ' + text_query)
@@ -16,6 +16,7 @@ def query(audio_blob, username=None):
     context_variables["username"] = username
     context_variables["action"] = None
     context_variables["continue"] = ""
+    context_variables["proactive_question"] = proactive_question
     print(context_variables)
 
     # Generate the response

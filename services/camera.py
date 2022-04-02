@@ -33,7 +33,10 @@ class Camera:
     
     def stop(self, service):
         with self.lock:
-            self.active_services.remove(service)
+            if not self.active_services:
+                return
+
+            self.active_services.discard(service)
 
             if not self.active_services:
                 self.pipeline.poll_for_frames() # clear last frame buffer
