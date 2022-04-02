@@ -1,16 +1,12 @@
 IBM
 ???? Mejorar lo de los moods para que tengan un nodo de intencion (no con variables)
-Recuerda: chapuza del NOT #GENEnding porque adios era muy triste al parecer
 Arreglar lo del orden de las emociones si tienes dos > 0.5
 Quiza habria que mandar en el nodo un "no espero respuesta"(is_question) o algo asi, para finalizar la conversacion
-Arreglar 'Soy Laura', que no me llamo 'Soy Laura' (no hay annotations en español.... Expresion regular con primera letra mayuscula. Pero si Ángel lo coge como ángel pues no lo pilla como nombre)
-
 
 OTROS
-PRoblema de mi codigo: solo habla cuando yo le hablo... necesidad de cambiar el código
 Ver a ver si consigo que las variables de entorno sirvan para pillas automaticamente las credenciales (o en su defecto el archivo como vairable de entorno)
 COrregir errores (de tipo try catch con cosas vacias y demas)
-quiza poner base de datos con el nombre y otras cosas fijas del usuario, y que se manden en la peticion en el contexto
+poner frases proactivas en un json
 logging?
 quitar warnings del audio mic
 limpiar todo esto un poquito (comentarios, quiza sacar constantes a otro .py, o cosas asi,Organizar archivos, unificar nombres style )
@@ -21,9 +17,6 @@ Si detecta alguna cara, pero este a distancia , pues ni puto caso (quitar falsos
 MIrar para poner la radio
 Arreglar ruido inicial microfono
 a veces pasa algo raro con los leds es verdad
-deteccion de presencia + recordatorio
-si no hay cara al principio de la ejecucion peta 
-si hay falsos unknown en una cara ya conocida no deberia preguntarte como te llamas otra vez :/
 Poner los leds (y ojos) acorde al mood de eva 
 
 pickle en lugar de json
@@ -34,13 +27,15 @@ si stt es vacio, devolver un continue_conversation dependiendo de la conversacio
 el timeout necesita que cierre la sesion de ibm
 encender wakeface solo si estas a x distancia de la camara
 
-
 proteger leds con mutex?
 
 ------ DONES -------
 IBM
 - Dudas: la informacion de mood se lanza siempre???????
 - Deducir cuando se ha acabado la conversacion tras silencio incomodo?? ---> DEADLINE? volver arbol de ibm al principio
+- Recuerda: chapuza del NOT #GENEnding porque adios era muy triste al parecer
+- Arreglar 'Soy Laura', que no me llamo 'Soy Laura' (no hay annotations en español.... Expresion regular con primera letra mayuscula. Pero si Ángel lo coge como ángel pues no lo pilla como nombre)
+
 
 OTROS
 - Limpiar git
@@ -55,3 +50,6 @@ cerrar sesion yo a X segundos
 - quiza lanzar otro hilo mientras se guarda la cara de alguien???'
 - reconocimiento de cara
 - Poner mutex a la lista de servicios de la camara
+- PRoblema de mi codigo: solo habla cuando yo le hablo... necesidad de cambiar el código
+- deteccion de presencia + recordatorio
+- si no hay cara al principio de la ejecucion peta 
