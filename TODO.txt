@@ -13,7 +13,7 @@ limpiar todo esto un poquito (comentarios, quiza sacar constantes a otro .py, o 
 mirar modos de agresividad en lo de detectar silensio ---> a ver si podemos hacerlo mejor
 mirar el eje y en la activacion de wakeface
 hacer que grabe a 8 canales, haga la media y lo pase a 1
-Si detecta alguna cara, pero este a distancia , pues ni puto caso (quitar falsos positivos cuando estas lejos), y asi puedo usar la back?? (no se)
+Si detecta alguna cara, pero este a distancia , pues ni caso (quitar falsos positivos cuando estas lejos), y asi puedo usar la back?? (no se)
 MIrar para poner la radio
 Arreglar ruido inicial microfono
 a veces pasa algo raro con los leds es verdad
@@ -26,6 +26,7 @@ poner diccionario de stado-color leds???
 si stt es vacio, devolver un continue_conversation dependiendo de la conversacion y de si te ha reconocido
 el timeout necesita que cierre la sesion de ibm
 encender wakeface solo si estas a x distancia de la camara
+controlar que , si no detecta un nombre, no guarde NULL asociado a una cara
 
 proteger leds con mutex?
 

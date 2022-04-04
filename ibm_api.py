@@ -17,7 +17,7 @@ USERNAME = data['username']
 with open('../credentials/assistant_credentials.json') as json_file:
     auth_data = json.load(json_file)
 
-SESSION_TIME = 20 # in seconds
+SESSION_TIME = 10 # in seconds
 last_query_time = None
 session_id = ''
 assistant_id = auth_data['assistant_id']

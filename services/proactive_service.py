@@ -19,9 +19,9 @@ class ProactiveService():
         self.callback = callback
 
         # Put an alarm every day at 8 am 
-        #self.next_question_time = (datetime.now() + timedelta(days=1)).replace(hour=8,minute=0)
+        self.next_question_time = (datetime.now() + timedelta(days=1)).replace(hour=8,minute=0)
         print('TIMER SETT')
-        self.next_question_time = datetime.now() + timedelta(minutes=1)
+        # TEST self.next_question_time = datetime.now() + timedelta(minutes=1)
 
     
     def update(self, type, subtype):
@@ -32,18 +32,23 @@ class ProactiveService():
                     self.callback('ask_how_are_you')
 
             elif subtype == 'unknown_face':
-                return
-                self.callback('who_are_you')
+                self.callback('ask_who_are_you')
             
         elif type == 'abort':
             if subtype == 'how_are_you':
                 # postpone the timer 2 hours
-                #self.next_question_time = datetime.now() + timedelta(hours=2)
+                self.next_question_time = datetime.now() + timedelta(hours=2)
                 print('TIMER POSTPONED')
-                self.next_question_time = datetime.now() + timedelta(seconds=30)
+                # TEST self.next_question_time = datetime.now() + timedelta(seconds=30)
+            
+            elif subtype == 'who_are_you':
+                pass
         
         elif type == 'confirm':
             if subtype == 'how_are_you':
-                #self.next_question_time = (datetime.now() + timedelta(days=1)).replace(hour=8,minute=0)
+                self.next_question_time = (datetime.now() + timedelta(days=1)).replace(hour=8,minute=0)
                 print('TIMER SETT')
-                self.next_question_time = datetime.now() + timedelta(minutes=1)
+                #TEST self.next_question_time = datetime.now() + timedelta(minutes=1)
+
+            elif subtype == 'who_are_you':
+                pass

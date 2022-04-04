@@ -102,6 +102,10 @@ def proactive_service_event_handler(event):
     if event == 'ask_how_are_you':
         notification ['params']['question'] = 'how_are_you'
         notifications.put(notification)
+    
+    elif event == 'ask_who_are_you':
+        notification ['params']['question'] = 'who_are_you'
+        notifications.put(notification)
 
 def listen_timeout_handler():
     global eva_context
@@ -220,8 +224,25 @@ def process_transition(transition, params):
             else:
                 proactive.update('abort', 'how_are_you')
             
-        if params['question'] == 'who_are_you':
-            pass
+        elif params['question'] == 'who_are_you':
+            if eva_context['state'] == 'listening':
+                eva_context['state'] = 'processing_query'
+                eva_led.set(Neutral())
+                wf.stop()
+                pd.stop()
+
+                audio_response = server.tts(random.choice(ProactiveService.phrases[params['question']]))
+                
+                eva_context['proactive_question'] = 'who_are_you'
+                eva_context['continue_conversation'] = True
+                eva_context['state'] = 'speaking'
+                eva_led.set(Breath())
+                speaker.start(audio_response)
+                server.prepare()
+
+                proactive.update('confirm', 'who_are_you')
+            else:
+                proactive.update('abort', 'who_are_you')
 
         
 
