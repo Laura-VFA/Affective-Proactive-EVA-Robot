@@ -27,6 +27,7 @@ si stt es vacio, devolver un continue_conversation dependiendo de la conversacio
 el timeout necesita que cierre la sesion de ibm
 encender wakeface solo si estas a x distancia de la camara
 controlar que , si no detecta un nombre, no guarde NULL asociado a una cara
+poner timeout para crear la sesion de IBM, y si no lo consigue hacer que Eva diga "error"
 
 proteger leds con mutex?
 

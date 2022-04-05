@@ -197,6 +197,7 @@ def process_transition(transition, params):
     
     elif transition == 'listening_without_cam2idle_presence'and eva_context['state'] == 'listening_without_cam':
         eva_context['state'] = 'idle_presence'
+        eva_context['proactive_question'] =  ''
         eva_led.set(Close())
         mic.stop()
         pd.start()
@@ -207,6 +208,7 @@ def process_transition(transition, params):
             if eva_context['state'] == 'idle_presence':
                 eva_context['state'] = 'processing_query'
                 eva_led.set(Neutral())
+                #mic.stop()
                 wf.stop()
                 pd.stop()
 
@@ -228,6 +230,7 @@ def process_transition(transition, params):
             if eva_context['state'] == 'listening':
                 eva_context['state'] = 'processing_query'
                 eva_led.set(Neutral())
+                mic.stop()
                 wf.stop()
                 pd.stop()
 
@@ -283,9 +286,8 @@ pd.start()
 print('Start!')
 try:
     while True:
-        time.sleep(0.1)
         notification = notifications.get()
-        
+
         transition = notification['transition']
         params = notification.get('params', {})
         process_transition(transition, params)
