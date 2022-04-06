@@ -1,5 +1,6 @@
 # contains methods for the assistant performance: google services
 # (TTS, STT and translation)
+import os
 
 from google.oauth2 import service_account
 
@@ -9,22 +10,19 @@ from google.cloud import translate_v2 as translate
 
 
 # TTS 
-SERVICE_ACCOUNT_FILE = "../credentials/tts_credentials.json"
-credentials = service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE)
+credentials = service_account.Credentials.from_service_account_file(os.environ.get('TTS_CREDENTIALS'))
 clientTTS = texttospeech.TextToSpeechClient(credentials=credentials)
-#const clientTTS = new textToSpeech.TextToSpeechClient( {keyFilename: "tts_credentials.json"});
 voice = texttospeech.VoiceSelectionParams(
     language_code='es-ES', ssml_gender=texttospeech.SsmlVoiceGender.FEMALE
 )
 tts_config = texttospeech.AudioConfig(
-    audio_encoding=texttospeech.AudioEncoding.LINEAR16, #TODO LINEAR16, 24000 HRZ
+    audio_encoding=texttospeech.AudioEncoding.LINEAR16,
     sample_rate_hertz=24000
 )
 
 # STT 
-SERVICE_ACCOUNT_FILE = "../credentials/stt_credentials.json"
-credentials = service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE)
-clientSTT = speech.SpeechClient(credentials=credentials) # keyfilename?
+credentials = service_account.Credentials.from_service_account_file(os.environ.get('STT_CREDENTIALS'))
+clientSTT = speech.SpeechClient(credentials=credentials)
 stt_config = speech.RecognitionConfig(
     encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
     sample_rate_hertz=16000,
@@ -32,9 +30,8 @@ stt_config = speech.RecognitionConfig(
 )
 
 # Translator 
-SERVICE_ACCOUNT_FILE = "../credentials/translation_credentials.json"
-credentials = service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE)
-translate_client = translate.Client(credentials=credentials) #keyfilename??
+credentials = service_account.Credentials.from_service_account_file(os.environ.get('TRANSLATOR_CREDENTIALS'))
+translate_client = translate.Client(credentials=credentials)
 
 
 
