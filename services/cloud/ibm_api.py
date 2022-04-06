@@ -1,20 +1,13 @@
 # contains methods for the assistant performance: ibm watson
 
 import json
+import os
 from datetime import datetime
 
-from ibm_cloud_sdk_core.authenticators import IAMAuthenticator
 from ibm_watson import AssistantV2, NaturalLanguageUnderstandingV1
 
-'''
-with open('./bbdd.json', 'r') as f:
-  data = json.load(f)
 
-USERNAME = data['username']
-'''
-
-# Assistant (TODO PROBAR A QUE COJA SOLO LO DE LAS APIKEY)
-with open('../credentials/assistant_credentials.json') as json_file:
+with open(os.environ.get('WATSON_ASSISTANT_CREDENTIALS')) as json_file:
     auth_data = json.load(json_file)
 
 SESSION_TIME = 10 # in seconds

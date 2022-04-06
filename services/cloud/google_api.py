@@ -2,12 +2,9 @@
 # (TTS, STT and translation)
 import os
 
-from google.oauth2 import service_account
-
-from google.cloud import texttospeech, speech
+from google.cloud import speech, texttospeech
 from google.cloud import translate_v2 as translate
-
-
+from google.oauth2 import service_account
 
 # TTS 
 credentials = service_account.Credentials.from_service_account_file(os.environ.get('TTS_CREDENTIALS'))
