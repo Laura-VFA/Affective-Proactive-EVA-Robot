@@ -26,7 +26,7 @@ poner diccionario de stado-color leds???
 si stt es vacio, devolver un continue_conversation dependiendo de la conversacion y de si te ha reconocido
 el timeout necesita que cierre la sesion de ibm
 encender wakeface solo si estas a x distancia de la camara
-controlar que , si no detecta un nombre, no guarde NULL asociado a una cara
+controlar que , si no detecta un nombre, no guarde NULL asociado a una cara (ángel)
 poner timeout para crear la sesion de IBM, y si no lo consigue hacer que Eva diga "error"
 
 proteger leds con mutex?

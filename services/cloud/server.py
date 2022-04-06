@@ -1,5 +1,5 @@
-from google_api import getTextFromSpeech, getSpeechFromText, translateEStoEN
-from ibm_api import genResponse, analyzeMood, is_session_active, createSession
+from .google_api import getTextFromSpeech, getSpeechFromText, translateEStoEN
+from .ibm_api import genResponse, analyzeMood, is_session_active, createSession
 
 def query(audio_blob, username=None, proactive_question=''):
     # STT

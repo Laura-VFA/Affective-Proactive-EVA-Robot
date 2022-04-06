@@ -4,7 +4,7 @@ import random
 import threading
 import time
 
-import server
+from services.cloud import server 
 from services.camera_service import (FaceDB, PresenceDetector, RecordFace,
                                      Wakeface)
 from services.eva_led import *
