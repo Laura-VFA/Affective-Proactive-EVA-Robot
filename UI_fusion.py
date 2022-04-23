@@ -22,7 +22,7 @@ listen_timer = None
 DELAY_TIMEOUT = 5 # in sec
 
 
-def wf_event_handler(event, username=None):
+def wf_event_handler(event, usernames=None):
     global eva_context
 
     if event == 'face_listen' and eva_context['state'] == 'idle_presence':
@@ -35,10 +35,15 @@ def wf_event_handler(event, username=None):
             notifications.put({'transition': 'listening2idle_presence'})
         
     elif event == 'face_recognized':
-        print(username)
-        eva_context['username'] = username
+        print(usernames)
 
-        if not username:
+        known_names = [name for name in usernames if name] # remove None names
+        if known_names:
+            known_names = sorted(usernames, key=lambda name: usernames[name], reverse=True)
+            eva_context['username'] = known_names[0]
+            print('username updated to', eva_context['username'])
+
+        elif None in usernames and usernames[None] >= 3: # Detect 3 unknown in a row
             proactive.update('sensor', 'unknown_face')
 
 

@@ -58,13 +58,13 @@ class Wakeface(CameraService):
     def start(self):
 
         self.stopped.clear()
-        self._thread_wakeface = Thread(target=self._run)
+        self._thread_wakeface = Thread(target=self._run_detector)
         self._thread_recognizer = Thread(target=self._run_recognize)
         self._thread_wakeface.start()
         self._thread_recognizer.start()
         
     
-    def _run(self):
+    def _run_detector(self):
 
         CameraService.camera.start(self.__class__.__name__)
 
@@ -84,6 +84,7 @@ class Wakeface(CameraService):
                 self.callback('not_faces')
                 while not self.face_queue.empty(): self.face_queue.get(block=True)
                 someone_was_looking = False 
+                self.face_queue.put((None, []))
 
             else:
                 bboxes_looking = [ # Filter looking faces
@@ -96,18 +97,16 @@ class Wakeface(CameraService):
                     self.callback('face_not_listen') 
                     while not self.face_queue.empty(): self.face_queue.get(block=False)
                     someone_was_looking = False   
+                    self.face_queue.put((None, []))
 
                 else:
                     self.callback('face_listen')
 
-                    if not someone_was_looking: # Someone looking the first time
-                        someone_was_looking = True
+                    #if not someone_was_looking: # Someone looking the first time
+                    #    someone_was_looking = True
 
-                        # FACE RECOGNITION  
-                        self.face_queue.put({
-                            'frame': frame,
-                            'bboxes_looking': bboxes_looking
-                        })
+                    # FACE RECOGNITION  
+                    self.face_queue.put((frame, bboxes_looking))
                 
     
     def stop(self):
@@ -138,14 +137,21 @@ class Wakeface(CameraService):
     def _run_recognize(self):
         self.face_queue = queue.Queue()
 
+        face_history = {}
+
         while not self.stopped.is_set():
             try:
-                recognition_params = self.face_queue.get(timeout=.5)
+                frame, bboxes = self.face_queue.get(timeout=.5)
             except queue.Empty:
                 continue
             
-            names = self.recognize(**recognition_params)
-            self.callback('face_recognized', username=names[0])
+            if not bboxes:
+                face_history.clear()
+            elif not face_history or all(count < 3 if not name else False  for name, count in face_history.items()): # Execute recognizer until a face is recognized or None 3 times
+                names = set(self.recognize(frame, bboxes)) # Remove duplicates
+                print('recognized: ', names)
+                face_history = {name: face_history.get(name, 0) + 1 for name in names} # Names counter
+                self.callback('face_recognized', usernames=face_history)
         
     # https://pyimagesearch.com/2018/06/25/raspberry-pi-face-recognition/
     def recognize(self, frame, bboxes_looking):
@@ -249,8 +255,6 @@ class RecordFace(CameraService):
         self.stopped.set()
         if self._thread is not None and self._thread.is_alive():
             self._thread.join()
-
-
 
         
 class PresenceDetector(CameraService):

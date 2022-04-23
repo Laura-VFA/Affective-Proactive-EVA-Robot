@@ -1,6 +1,6 @@
 from matrix_lite import led
 from math import pi, sin
-from threading import Thread, Event
+from threading import Thread, Event, Lock
 import time
 
 class LedState:
@@ -133,11 +133,13 @@ class EvaLed:
     def __init__(self):
         self.state = Neutral()
         self.stopped = Event()
+        self.lock = Lock()
         self.start()
     
     def set(self, ledState:'LedState'):
-        if self.state.__class__ != ledState.__class__:
-            self.state = ledState
+        with self.lock:
+            if self.state.__class__ != ledState.__class__:
+                self.state = ledState
     
     def _run(self):
         while not self.stopped.is_set():
