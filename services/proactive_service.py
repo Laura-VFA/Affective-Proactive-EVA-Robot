@@ -1,19 +1,25 @@
+import json
+import random
 from datetime import datetime, timedelta
 
+
+class ProactivePhrases:
+    phrases_file = None
+    phrases = None
+
+    @staticmethod
+    def load(encodings_file='files/proactive_phrases.json'):
+        ProactivePhrases.encodings_file = encodings_file
+
+        with open(encodings_file) as json_file:
+            ProactivePhrases.phrases = json.load(json_file)
+    
+    @staticmethod
+    def get(phrase_key):
+        return random.choice(ProactivePhrases.phrases[phrase_key])
+
+
 class ProactiveService():
-    phrases = {
-        'how_are_you' : [
-            '¿Cómo estás?',
-            '¿Qué tal?',
-            '¿Qué tal estás?',
-            '¿Cómo te encuentras?',
-        ],
-        'who_are_you': [
-            'Creo que no nos conocemos. ¿Cómo te llamas?'
-        ]
-    }
-
-
     def __init__(self, callback) -> None:
         self.question = None
         self.callback = callback

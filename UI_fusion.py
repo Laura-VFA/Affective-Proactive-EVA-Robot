@@ -1,15 +1,13 @@
 import logging
 import queue
-import random
 import threading
-import time
 
 from services.cloud import server 
 from services.camera_service import (FaceDB, PresenceDetector, RecordFace,
                                      Wakeface)
 from services.eva_led import *
 from services.mic import Recorder
-from services.proactive_service import ProactiveService
+from services.proactive_service import ProactiveService, ProactivePhrases
 from services.speaker import Speaker
 
 # Logging configuration
@@ -217,7 +215,7 @@ def process_transition(transition, params):
                 wf.stop()
                 pd.stop()
 
-                audio_response = server.tts(random.choice(ProactiveService.phrases[params['question']]))
+                audio_response = server.tts(ProactivePhrases.get(params['question']))
                 
                 eva_context['proactive_question'] = 'how_are_you'
                 eva_context['continue_conversation'] = True
@@ -239,7 +237,7 @@ def process_transition(transition, params):
                 wf.stop()
                 pd.stop()
 
-                audio_response = server.tts(random.choice(ProactiveService.phrases[params['question']]))
+                audio_response = server.tts(ProactivePhrases.get(params['question']))
                 
                 eva_context['proactive_question'] = 'who_are_you'
                 eva_context['continue_conversation'] = True
@@ -273,6 +271,7 @@ def process_transition(transition, params):
 
 eva_led = EvaLed()
 FaceDB.load()
+ProactivePhrases.load()
 
 wf = Wakeface(wf_event_handler)
 rf = RecordFace(rf_event_handler)
