@@ -124,40 +124,40 @@ def process_transition(transition, params):
         wf.start()
     
     if transition == 'idle_presence2idle' and eva_context['state'] == 'idle_presence':
-        eva_led.set(Neutral())
+        eva_led.set(StaticColor('black'))
         eva_context['username'] = None
         eva_context['state'] = 'idle'
         wf.stop()
 
     if transition == 'idle_presence2listening' and eva_context['state'] == 'idle_presence':
-        eva_led.set(Listen())
+        eva_led.set(Loop('b'))
         eva_context['state'] = 'listening'
         pd.stop()
         mic.start()
 
     elif transition == 'listening2idle_presence' and eva_context['state'] == 'listening':
-        eva_led.set(Neutral())
+        eva_led.set(StaticColor('black'))
         eva_context['state'] = 'idle_presence'
         mic.stop()
         pd.start()
 
     elif transition == 'listening2recording' and eva_context['state'] == 'listening':
         eva_context['state'] = 'recording'
-        eva_led.set(Recording())
+        eva_led.set(Loop('w'))
         server.prepare()
         #disconnect camera
         wf.stop()
     
     elif transition == 'listening_without_cam2recording' and eva_context['state'] == 'listening_without_cam':
         eva_context['state'] = 'recording'
-        eva_led.set(Recording())
+        eva_led.set(Loop('w'))
         server.prepare()
 
         listen_timer.cancel()
 
     elif transition == 'recording2processingquery' and eva_context['state'] == 'recording':
         eva_context['state'] = 'processing_query'
-        eva_led.set(Neutral())
+        eva_led.set(StaticColor('black'))
         mic.stop()
 
         audio = params['audio']
@@ -175,17 +175,17 @@ def process_transition(transition, params):
 
         if audio_response:
             eva_context['state'] = 'speaking'
-            eva_led.set(Breath())
+            eva_led.set(Breath('b'))
             speaker.start(audio_response)
         else:
-            eva_led.set(Neutral())
+            eva_led.set(StaticColor('black'))
             eva_context['state'] = 'idle_presence'
             pd.start()
             wf.start()
 
     elif transition == 'speaking2listening_without_cam' and eva_context['state'] == 'speaking':
         eva_context['state'] = 'listening_without_cam'
-        eva_led.set(Listen())
+        eva_led.set(Loop('b'))
         mic.start()
 
         # Add a timeout to execute a transition funcion due to inactivity
@@ -194,14 +194,14 @@ def process_transition(transition, params):
 
     elif transition == 'speaking2idle_presence' and eva_context['state'] == 'speaking':
         eva_context['state'] = 'idle_presence' 
-        eva_led.set(Neutral())
+        eva_led.set(StaticColor('black'))
         pd.start()
         wf.start()
     
     elif transition == 'listening_without_cam2idle_presence'and eva_context['state'] == 'listening_without_cam':
         eva_context['state'] = 'idle_presence'
         eva_context['proactive_question'] =  ''
-        eva_led.set(Close())
+        eva_led.set(Close('blue'))
         mic.stop()
         pd.start()
         wf.start()
@@ -210,7 +210,7 @@ def process_transition(transition, params):
         if params['question'] == 'how_are_you':
             if eva_context['state'] == 'idle_presence':
                 eva_context['state'] = 'processing_query'
-                eva_led.set(Neutral())
+                eva_led.set(StaticColor('black'))
                 #mic.stop()
                 wf.stop()
                 pd.stop()
@@ -220,7 +220,7 @@ def process_transition(transition, params):
                 eva_context['proactive_question'] = 'how_are_you'
                 eva_context['continue_conversation'] = True
                 eva_context['state'] = 'speaking'
-                eva_led.set(Breath())
+                eva_led.set(Breath('b'))
                 speaker.start(audio_response)
                 server.prepare()
 
@@ -232,7 +232,7 @@ def process_transition(transition, params):
         elif params['question'] == 'who_are_you':
             if eva_context['state'] == 'listening':
                 eva_context['state'] = 'processing_query'
-                eva_led.set(Neutral())
+                eva_led.set(StaticColor('black'))
                 mic.stop()
                 wf.stop()
                 pd.stop()
@@ -242,7 +242,7 @@ def process_transition(transition, params):
                 eva_context['proactive_question'] = 'who_are_you'
                 eva_context['continue_conversation'] = True
                 eva_context['state'] = 'speaking'
-                eva_led.set(Breath())
+                eva_led.set(Breath('b'))
                 speaker.start(audio_response)
                 server.prepare()
 
@@ -253,15 +253,15 @@ def process_transition(transition, params):
         
 
     elif transition == 'recording_face':
-        eva_led.set(Progress(params['progress']))
+        eva_led.set(Progress(percentage=params['progress']))
 
         if params['progress'] == 100:
             if eva_context['state'] == 'listening_without_cam':
-                eva_led.set(Listen())
+                eva_led.set(Loop('b'))
             elif eva_context['state'] == 'recording':
-                eva_led.set(Recording())
+                eva_led.set(Loop('w'))
             else:
-                eva_led.set(Neutral())
+                eva_led.set(StaticColor('black'))
 
     
 
