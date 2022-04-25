@@ -1,35 +1,47 @@
-import pickle
-import time
-from threading import Event, Thread
-import json
 import queue
+from threading import Event, Thread
 
 import cv2
 import face_recognition
+import pandas as pd
+import numpy as np
 from fdlite import FaceDetection, FaceDetectionModel, FaceIndex
 from PIL import Image
-from .camera import Camera
-from .presence_detector.object_detector import ObjectDetector
-from .presence_detector.object_detector import ObjectDetectorOptions
 
-#dict_encodings = pickle.loads(open('./encodings.json', "r").read())
+from .camera import Camera
+from .presence_detector.object_detector import (ObjectDetector,
+                                                ObjectDetectorOptions)
+
 
 class FaceDB:
-    dict_encodings = None
+    encodings = None
     encodings_file = None
 
     @staticmethod
-    def load(encodings_file='./encodings.json'):
+    def load(encodings_file='files/encodings.csv'):
         FaceDB.encodings_file = encodings_file
 
-        with open(encodings_file) as json_file:
-            FaceDB.dict_encodings = json.load(json_file)
+        try:
+            df = pd.read_csv(FaceDB.encodings_file, sep=';', header=None)
+            FaceDB.encodings = {
+                'names': df[0].to_list(),
+                'encodings': df.loc[:, 1:128].to_numpy()
+            }
+        except pd.errors.EmptyDataError:
+            FaceDB.encodings = {'names':[], 'encodings':np.empty((0,128))}
+    
+    @staticmethod
+    def append(name, new_encoding):
+        FaceDB.encodings['names'].append(name)
+        FaceDB.encodings['encodings'] = np.append(FaceDB.encodings['encodings'], np.expand_dims(new_encoding, axis=0), axis=0)
+        
+        with open(FaceDB.encodings_file, 'a') as f:
+            f.write(';'.join([name, *[str(val) for val in new_encoding]]))
+            f.write('\n')
     
     @staticmethod
     def dump():
-        with open(FaceDB.encodings_file, 'w') as json_file:
-            json.dump(FaceDB.dict_encodings, json_file)
-
+        FaceDB.encodings.to_csv(FaceDB.encodings_file, sep=';')
 
 
 class CameraService:
@@ -68,8 +80,6 @@ class Wakeface(CameraService):
 
         CameraService.camera.start(self.__class__.__name__)
 
-        someone_was_looking = False
-
         while not self.stopped.is_set():
             # Get frame
             frame = CameraService.camera.get_color_frame(resize=True)
@@ -83,7 +93,6 @@ class Wakeface(CameraService):
             if not face_detections :
                 self.callback('not_faces')
                 while not self.face_queue.empty(): self.face_queue.get(block=True)
-                someone_was_looking = False 
                 self.face_queue.put((None, []))
 
             else:
@@ -96,7 +105,6 @@ class Wakeface(CameraService):
                 if not bboxes_looking : # No one looking
                     self.callback('face_not_listen') 
                     while not self.face_queue.empty(): self.face_queue.get(block=False)
-                    someone_was_looking = False   
                     self.face_queue.put((None, []))
 
                 else:
@@ -164,7 +172,7 @@ class Wakeface(CameraService):
         for encoding in encodings:
             # attempt to match each face in the input image to our known
             # encodings
-            matches = face_recognition.compare_faces(FaceDB.dict_encodings["encodings"],
+            matches = face_recognition.compare_faces(FaceDB.encodings["encodings"],
                 encoding)
             name = None
             # check to see if we have found a match
@@ -177,7 +185,7 @@ class Wakeface(CameraService):
                 # loop over the matched indexes and maintain a count for
                 # each recognized face face
                 for i in matchedIdxs:
-                    name = FaceDB.dict_encodings["names"][i]
+                    name = FaceDB.encodings["names"][i]
                     counts[name] = counts.get(name, 0) + 1
                 # determine the recognized face with the largest number
                 # of votes (note: in the event of an unlikely tie Python
@@ -240,13 +248,10 @@ class RecordFace(CameraService):
                     # compute the facial embeddings for each face bounding box
                     encodings = face_recognition.face_encodings(frame, boxes)
                     encoding = encodings[0]
-                    FaceDB.dict_encodings['encodings'].append(encoding.tolist())
-                    FaceDB.dict_encodings['names'].append(name)
+                    FaceDB.append(name, encoding)
                     counter += 1
 
                     self.callback('recording_face', progress=counter*100/n_frames)
-
-        FaceDB.dump()
         
         CameraService.camera.stop(self.__class__.__name__)
 
