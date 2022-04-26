@@ -130,17 +130,26 @@ class Wakeface(CameraService):
     @staticmethod
     def check_looking(face, incr=0.25):
         # WAKEFACE
-        xr, yr = face[FaceIndex.RIGHT_EYE_TRAGION]
-        xl, yl = face[FaceIndex.LEFT_EYE_TRAGION]
+        xr, _ = face[FaceIndex.RIGHT_EYE_TRAGION]
+        xl, _ = face[FaceIndex.LEFT_EYE_TRAGION]
+        _, ye1 = face[FaceIndex.LEFT_EYE]
+        _, ye2 = face[FaceIndex.RIGHT_EYE]
+        _, ym = face[FaceIndex.MOUTH]
         xn, yn = face[FaceIndex.NOSE_TIP]
 
         # Range mapping
+        # X axis
         xn = (xn - xl) / (xr - xl)
         xl = 0
         xr = 1
+        # Y axis
+        ye = (ye1 + ye2) / 2 # mean of both eyes
+        yn = (yn - ye) / (ym - ye)
+        ye = 0 
+        ym = 1
 
         # Interval checking
-        return (xl + incr)  <= xn <= (xr - incr)  # and yn >= max(yl, yr)
+        return ((xl + incr)  <= xn <= (xr - incr))  and ((ye + incr) <= yn <= (ym - incr))
 
     def _run_recognize(self):
         self.face_queue = queue.Queue()
