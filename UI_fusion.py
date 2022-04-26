@@ -18,6 +18,8 @@ logging.basicConfig(filename='./logs/UI.log', format='%(asctime)s - %(levelname)
 notifications = queue.Queue()
 listen_timer = None
 DELAY_TIMEOUT = 5 # in sec
+with open('files/connection_error.wav', 'rb') as f:
+    connection_error_audio = f.read()
 
 
 def wf_event_handler(event, usernames=None):
@@ -144,14 +146,20 @@ def process_transition(transition, params):
     elif transition == 'listening2recording' and eva_context['state'] == 'listening':
         eva_context['state'] = 'recording'
         eva_led.set(Loop('w'))
-        server.prepare()
+        try:
+            server.prepare()
+        except Exception as e:
+            pass # TODO: logging
         #disconnect camera
         wf.stop()
     
     elif transition == 'listening_without_cam2recording' and eva_context['state'] == 'listening_without_cam':
         eva_context['state'] = 'recording'
         eva_led.set(Loop('w'))
-        server.prepare()
+        try:
+            server.prepare()
+        except Exception as e:
+            pass # TODO: logging
 
         listen_timer.cancel()
 
@@ -162,35 +170,41 @@ def process_transition(transition, params):
 
         audio = params['audio']
 
-        audio_response, action, continue_conversation = server.query(audio, eva_context['username'], eva_context['proactive_question'])
-
-
-        if action: # Execute associated action
-            # Switch con tipos de acciones
-            if action[0] == 'record_face':
-                eva_context['username'] = action[1]
-                rf.start(action[1])
-
-        if audio_response:
-            eva_context['continue_conversation'] = continue_conversation # To avoid empty responses due to noises
+        try:
+            audio_response, action, continue_conversation = server.query(audio, eva_context['username'], eva_context['proactive_question'])
+        except Exception:
+            eva_context['continue_conversation'] = False
             eva_context['proactive_question'] = ''
-
             eva_context['state'] = 'speaking'
-            eva_led.set(Breath('b'))
-            speaker.start(audio_response)
-        elif eva_context['continue_conversation']: # Avoid end the conversation due to noises
-            eva_context['state'] = 'listening_without_cam'
-            eva_led.set(Loop('b'))
-            mic.start()
-
-            # Add a timeout to execute a transition funcion due to inactivity
-            listen_timer = threading.Timer(DELAY_TIMEOUT, listen_timeout_handler)
-            listen_timer.start()
+            eva_led.set(Breath('r'))
+            speaker.start(connection_error_audio)
         else:
-            eva_led.set(StaticColor('black'))
-            eva_context['state'] = 'idle_presence'
-            pd.start()
-            wf.start()
+            if action: # Execute associated action
+                # Switch with action types
+                if action[0] == 'record_face':
+                    eva_context['username'] = action[1]
+                    rf.start(action[1])
+
+            if audio_response:
+                eva_context['continue_conversation'] = continue_conversation 
+                eva_context['proactive_question'] = ''
+
+                eva_context['state'] = 'speaking'
+                eva_led.set(Breath('b'))
+                speaker.start(audio_response)
+            elif eva_context['continue_conversation']: # Avoid end the conversation due to noises
+                eva_context['state'] = 'listening_without_cam'
+                eva_led.set(Loop('b'))
+                mic.start()
+
+                # Add a timeout to execute a transition funcion due to inactivity
+                listen_timer = threading.Timer(DELAY_TIMEOUT, listen_timeout_handler)
+                listen_timer.start()
+            else:
+                eva_led.set(StaticColor('black'))
+                eva_context['state'] = 'idle_presence'
+                pd.start()
+                wf.start()
 
     elif transition == 'speaking2listening_without_cam' and eva_context['state'] == 'speaking':
         eva_context['state'] = 'listening_without_cam'
@@ -225,16 +239,29 @@ def process_transition(transition, params):
                 wf.stop()
                 pd.stop()
 
-                audio_response = server.tts(ProactivePhrases.get(params['question']))
-                
-                eva_context['proactive_question'] = 'how_are_you'
-                eva_context['continue_conversation'] = True
-                eva_context['state'] = 'speaking'
-                eva_led.set(Breath('b'))
-                speaker.start(audio_response)
-                server.prepare()
+                try:
+                    audio_response = server.tts(ProactivePhrases.get(params['question']))
+                except Exception as e:
+                    eva_context['continue_conversation'] = False
+                    eva_context['proactive_question'] = ''
+                    eva_context['state'] = 'speaking'
+                    eva_led.set(Breath('r'))
+                    speaker.start(connection_error_audio)
 
-                proactive.update('confirm', 'how_are_you')
+                    proactive.update('abort', 'how_are_you')
+
+                else:
+                    eva_context['proactive_question'] = 'how_are_you'
+                    eva_context['continue_conversation'] = True
+                    eva_context['state'] = 'speaking'
+                    eva_led.set(Breath('b'))
+                    speaker.start(audio_response)
+                    try:
+                        server.prepare()
+                    except Exception as e:
+                        pass # TODO: logging
+
+                    proactive.update('confirm', 'how_are_you')
 
             else:
                 proactive.update('abort', 'how_are_you')
@@ -247,16 +274,28 @@ def process_transition(transition, params):
                 wf.stop()
                 pd.stop()
 
-                audio_response = server.tts(ProactivePhrases.get(params['question']))
-                
-                eva_context['proactive_question'] = 'who_are_you'
-                eva_context['continue_conversation'] = True
-                eva_context['state'] = 'speaking'
-                eva_led.set(Breath('b'))
-                speaker.start(audio_response)
-                server.prepare()
+                try:
+                    audio_response = server.tts(ProactivePhrases.get(params['question']))    
+                except Exception as e:
+                    eva_context['continue_conversation'] = False
+                    eva_context['proactive_question'] = ''
+                    eva_context['state'] = 'speaking'
+                    eva_led.set(Breath('r'))
+                    speaker.start(connection_error_audio)
 
-                proactive.update('confirm', 'who_are_you')
+                    proactive.update('abort', 'who_are_you')
+                else:
+                    eva_context['proactive_question'] = 'who_are_you'
+                    eva_context['continue_conversation'] = True
+                    eva_context['state'] = 'speaking'
+                    eva_led.set(Breath('b'))
+                    speaker.start(audio_response)
+                    try:
+                        server.prepare()
+                    except Exception as e:
+                        pass # TODO logging
+
+                    proactive.update('confirm', 'who_are_you')
             else:
                 proactive.update('abort', 'who_are_you')
 

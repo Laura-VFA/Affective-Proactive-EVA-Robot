@@ -33,37 +33,27 @@ translate_client = translate.Client(credentials=credentials)
 
 
 def getTextFromSpeech(audio_bytes):
-    try:
-        audio = speech.RecognitionAudio(content=audio_bytes)
-        response = clientSTT.recognize(config=stt_config, audio=audio)
-    except Exception as e:
-        print('STT Error:', str(e))
+    audio = speech.RecognitionAudio(content=audio_bytes)
+    response = clientSTT.recognize(config=stt_config, audio=audio)
     
-    else:
-        total_response = ''
+    total_response = ''
 
-        for result in response.results:
-            # The first alternative is the most likely one for this portion.
-            total_response += result.alternatives[0].transcript
+    for result in response.results:
+        # The first alternative is the most likely one for this portion.
+        total_response += result.alternatives[0].transcript
 
-        return total_response
+    return total_response
 
 def getSpeechFromText(text):
-    try:
-        synthesis_input = texttospeech.SynthesisInput(text=text)
-        response = clientTTS.synthesize_speech(
-            input=synthesis_input, voice=voice, audio_config=tts_config
-        )
-    except Exception as e:
-        print('TTS Error: ', str(e))
-    else:
-        return response.audio_content
+    synthesis_input = texttospeech.SynthesisInput(text=text)
+    response = clientTTS.synthesize_speech(
+        input=synthesis_input, voice=voice, audio_config=tts_config
+    )
+
+    return response.audio_content
 
 def translateEStoEN(text):
-    try:
-        result = translate_client.translate(text, target_language='en')
-    except Exception as e:
-        print('translation Error: ', str(e))
-    else:
-        return result["translatedText"]
+    result = translate_client.translate(text, target_language='en')
+
+    return result["translatedText"]
 

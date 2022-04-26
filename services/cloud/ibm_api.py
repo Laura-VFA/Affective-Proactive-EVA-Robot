@@ -21,13 +21,12 @@ assistant = AssistantV2(
 
 def createSession():
     global session_id, assistant_id
-    try:
-        response = assistant.create_session(
-            assistant_id=assistant_id
-        ).get_result()
-        session = response['session_id']
-    except Exception as e:
-        print(('createSession Error: ' + str(e)))
+
+    response = assistant.create_session(
+        assistant_id=assistant_id
+    ).get_result()
+    session = response['session_id']
+
     session_id = session
 
 
@@ -88,6 +87,7 @@ def analyzeMood(text):
         response = nlu.analyze(**nluOptions).get_result()
     except Exception as e:
         print('analyzeMood error: ', str(e))
+        return {}
     else:
         return response['emotion']['document']['emotion']
 
