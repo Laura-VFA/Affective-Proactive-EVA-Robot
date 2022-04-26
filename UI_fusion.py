@@ -164,8 +164,6 @@ def process_transition(transition, params):
 
         audio_response, action, continue_conversation = server.query(audio, eva_context['username'], eva_context['proactive_question'])
 
-        eva_context['continue_conversation'] = continue_conversation
-        eva_context['proactive_question'] = ''
 
         if action: # Execute associated action
             # Switch con tipos de acciones
@@ -174,9 +172,20 @@ def process_transition(transition, params):
                 rf.start(action[1])
 
         if audio_response:
+            eva_context['continue_conversation'] = continue_conversation # To avoid empty responses due to noises
+            eva_context['proactive_question'] = ''
+
             eva_context['state'] = 'speaking'
             eva_led.set(Breath('b'))
             speaker.start(audio_response)
+        elif eva_context['continue_conversation']: # Avoid end the conversation due to noises
+            eva_context['state'] = 'listening_without_cam'
+            eva_led.set(Loop('b'))
+            mic.start()
+
+            # Add a timeout to execute a transition funcion due to inactivity
+            listen_timer = threading.Timer(DELAY_TIMEOUT, listen_timeout_handler)
+            listen_timer.start()
         else:
             eva_led.set(StaticColor('black'))
             eva_context['state'] = 'idle_presence'
@@ -200,6 +209,7 @@ def process_transition(transition, params):
     
     elif transition == 'listening_without_cam2idle_presence'and eva_context['state'] == 'listening_without_cam':
         eva_context['state'] = 'idle_presence'
+        eva_context['continue_conversation'] =  False
         eva_context['proactive_question'] =  ''
         eva_led.set(Close('blue'))
         mic.stop()
