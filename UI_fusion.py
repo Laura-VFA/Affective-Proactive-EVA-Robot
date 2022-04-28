@@ -218,6 +218,7 @@ def process_transition(transition, params):
     elif transition == 'speaking2idle_presence' and eva_context['state'] == 'speaking':
         eva_context['state'] = 'idle_presence' 
         eva_led.set(StaticColor('black'))
+        rf.stop()
         pd.start()
         wf.start()
     
@@ -227,6 +228,7 @@ def process_transition(transition, params):
         eva_context['proactive_question'] =  ''
         eva_led.set(Close('blue'))
         mic.stop()
+        rf.stop()
         pd.start()
         wf.start()
 

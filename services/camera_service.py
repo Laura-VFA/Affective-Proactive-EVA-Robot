@@ -3,9 +3,10 @@ from threading import Event, Thread
 
 import cv2
 import face_recognition
-import pandas as pd
 import numpy as np
+import pandas as pd
 from fdlite import FaceDetection, FaceDetectionModel, FaceIndex
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from PIL import Image
 
 from .camera import Camera
@@ -225,12 +226,16 @@ class RecordFace(CameraService):
         self._thread = Thread(target=self._run, args=(name,))
         self._thread.start()
     
-    def _run(self, name, n_frames=6):
+    def _run(self, name, n_frames=6, n_augmented_images_per_frame=4):
 
         CameraService.camera.start(self.__class__.__name__)
+
+        augmenter = ImageDataGenerator(shear_range=0.1,
+                               horizontal_flip=True)
         
-        counter = 0
-        while counter < n_frames and not self.stopped.is_set():
+        frames_recorded = 0
+        frames_without_faces = 0
+        while frames_recorded < n_frames and not self.stopped.is_set():
             print('recording frame!!')
             # Get frame
             frame = CameraService.camera.get_color_frame(resize=True)
@@ -241,7 +246,13 @@ class RecordFace(CameraService):
                 Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
             )
 
-            if face_detections:
+            if not face_detections:
+                frames_without_faces += 1
+                if frames_without_faces == 10:
+                    break # Cancel face recording if there is no faces in 10 consecutive frames
+
+            else:
+                frames_without_faces = 0
 
                 bboxes_looking = [ # Filter looking faces
                     face.bbox.scale((w, h))
@@ -252,15 +263,35 @@ class RecordFace(CameraService):
                 if bboxes_looking:
 
                     # get encodings 
-                    boxes = [(int(box.ymin), int(box.xmax), int(box.ymax), int(box.xmin)) for box in bboxes_looking]
+                    #boxes = [(int(box.ymin), int(box.xmax), int(box.ymax), int(box.xmin)) for box in bboxes_looking]
+                    box = bboxes_looking[0] # take only the first box
+                    box_recog = (int(box.ymin), int(box.xmax), int(box.ymax), int(box.xmin)) # change format to (top, right, bottom, left)
                     
-                    # compute the facial embeddings for each face bounding box
-                    encodings = face_recognition.face_encodings(frame, boxes)
-                    encoding = encodings[0]
+                    # compute the facial embeddings for the face bounding box
+                    #encodings = face_recognition.face_encodings(frame, box)
+                    #encoding = encodings[0]
+                    encoding = face_recognition.face_encodings(frame, [box_recog])[0] # take first encoding
                     FaceDB.append(name, encoding)
-                    counter += 1
+                    frames_recorded += 1
 
-                    self.callback('recording_face', progress=counter*100/n_frames)
+                    '''
+                    face_crop = frame[int(box.ymin):int(box.ymax) + 1, int(box.xmin):int(box.xmax)+1]
+                    #face_crop = cv2.cvtColor(face_crop, cv2.COLOR_BGR2RGB)
+                    cv2.imwrite('test/Frame.jpg', face_crop)
+           
+                    augmented_images = next(augmenter.flow(np.array([face_crop, face_crop, face_crop]), batch_size=4))
+                    print('AAA,' ,augmented_images.shape)
+                    i = 0
+                    for face in augmented_images:
+                        shape = (0, face.shape[:2][1] - 1, face.shape[:2][0] - 1, 0 )
+                        print(shape)
+                        #encoding = face_recognition.face_encodings(face, [shape])
+                        #FaceDB.append(name, encoding)
+                        cv2.imwrite(f'test/Frame{i}.jpg', face)
+                        i+=1
+                    
+                    '''
+                    self.callback('recording_face', progress=frames_recorded*100/n_frames)
         
         CameraService.camera.stop(self.__class__.__name__)
 
