@@ -136,6 +136,7 @@ ibm-credentials.env
 # Other
 *.pickle
 *.csv
+TODO.txt
 
 # Logs
 .logs/
