@@ -1,7 +1,9 @@
-from matrix_lite import led
-from math import pi, sin
-from threading import Thread, Event, Lock
 import time
+from math import pi, sin
+from threading import Event, Lock, Thread
+
+from matrix_lite import led
+
 
 class LedState:
     def __init__(self):

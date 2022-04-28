@@ -2,12 +2,13 @@ import logging
 import queue
 import threading
 
-from services.cloud import server 
 from services.camera_service import (FaceDB, PresenceDetector, RecordFace,
                                      Wakeface)
+from services.cloud import server
 from services.eva_led import *
+from services.eyes.eva_eyes import EvaEyes
 from services.mic import Recorder
-from services.proactive_service import ProactiveService, ProactivePhrases
+from services.proactive_service import ProactivePhrases, ProactiveService
 from services.speaker import Speaker
 
 # Logging configuration
@@ -171,7 +172,9 @@ def process_transition(transition, params):
         audio = params['audio']
 
         try:
-            audio_response, action, continue_conversation = server.query(audio, eva_context['username'], eva_context['proactive_question'])
+            audio_response, action, continue_conversation, eva_mood = server.query(
+                audio, eva_context['username'], eva_context['proactive_question']
+            )
         except Exception:
             eva_context['continue_conversation'] = False
             eva_context['proactive_question'] = ''
@@ -190,6 +193,7 @@ def process_transition(transition, params):
                 eva_context['proactive_question'] = ''
 
                 eva_context['state'] = 'speaking'
+                eva_eyes.set(eva_mood)
                 eva_led.set(Breath('b'))
                 speaker.start(audio_response)
             elif eva_context['continue_conversation']: # Avoid end the conversation due to noises
@@ -201,6 +205,7 @@ def process_transition(transition, params):
                 listen_timer = threading.Timer(DELAY_TIMEOUT, listen_timeout_handler)
                 listen_timer.start()
             else:
+                eva_eyes.set('neutral')
                 eva_led.set(StaticColor('black'))
                 eva_context['state'] = 'idle_presence'
                 pd.start()
@@ -226,6 +231,7 @@ def process_transition(transition, params):
         eva_context['state'] = 'idle_presence'
         eva_context['continue_conversation'] =  False
         eva_context['proactive_question'] =  ''
+        eva_eyes.set('neutral')
         eva_led.set(Close('blue'))
         mic.stop()
         rf.stop()
@@ -321,6 +327,7 @@ def process_transition(transition, params):
     
 
 eva_led = EvaLed()
+eva_eyes = EvaEyes()
 FaceDB.load()
 ProactivePhrases.load()
 
@@ -356,5 +363,6 @@ pd.stop()
 mic.stop()
 speaker.destroy()
 eva_led.stop()
+eva_eyes.stop()
 
 logging.info(f'UI finished')

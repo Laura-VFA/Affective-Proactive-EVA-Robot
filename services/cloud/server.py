@@ -6,7 +6,7 @@ def query(audio_blob, username=None, proactive_question=''):
     text_query = getTextFromSpeech(audio_blob)
     print('L: ' + text_query)
     if not text_query:
-        return None, None, False
+        return None, None, False, 'neutral'
 
     # Translation (for emotion analysis)
     translation = translateEStoEN(text_query)
@@ -16,18 +16,19 @@ def query(audio_blob, username=None, proactive_question=''):
     context_variables["username"] = username
     context_variables["action"] = None
     context_variables["continue"] = ""
+    context_variables["eva_mood"] = ""
     context_variables["proactive_question"] = proactive_question
     print(context_variables)
 
     # Generate the response
-    text_response, action, continue_flag = genResponse(text_query, context_variables)
+    text_response, action, continue_flag, eva_mood = genResponse(text_query, context_variables)
     print('E: ' + text_response)
 
     # TTS
     audio_response = getSpeechFromText(text_response)
 
     # Send back the response
-    return audio_response, action, continue_flag
+    return audio_response, action, continue_flag, eva_mood
 
 def tts(text):
     return getSpeechFromText(text)
