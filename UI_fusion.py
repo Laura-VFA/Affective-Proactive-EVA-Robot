@@ -5,6 +5,7 @@ import threading
 from services.camera_service import (FaceDB, PresenceDetector, RecordFace,
                                      Wakeface)
 from services.cloud import server
+from services.cloud.telegram import TelegramService
 from services.eva_led import *
 from services.eyes.eva_eyes import EvaEyes
 from services.mic import Recorder
@@ -97,7 +98,7 @@ def speaker_event_handler(event):
         else:
             notifications.put({'transition': 'speaking2idle_presence'})
 
-def proactive_service_event_handler(event):
+def proactive_service_event_handler(event, params={}):
     notification = {
         'transition': 'proactive2processingquery',
         'params': {
@@ -112,10 +113,26 @@ def proactive_service_event_handler(event):
     elif event == 'ask_who_are_you':
         notification ['params']['question'] = 'who_are_you'
         notifications.put(notification)
+    
+    elif event == 'read_pending_messages':
+        notification ['params']['question'] = 'read_pending_messages'
+        notification['params']['messages'] = params
+        notifications.put(notification)
+        
 
 def listen_timeout_handler():
     global eva_context
     notifications.put({'transition': 'listening_without_cam2idle_presence'})
+
+def tg_event_handler(name, message): # incoming telegram message
+    
+    notifications.put({
+        'transition': 'received_tg_message', 
+        'params': {
+            'name': name,
+            'message': message
+        }
+    })
 
 
 def process_transition(transition, params):
@@ -243,7 +260,6 @@ def process_transition(transition, params):
             if eva_context['state'] == 'idle_presence':
                 eva_context['state'] = 'processing_query'
                 eva_led.set(StaticColor('black'))
-                #mic.stop()
                 wf.stop()
                 pd.stop()
 
@@ -280,7 +296,6 @@ def process_transition(transition, params):
                 eva_led.set(StaticColor('black'))
                 mic.stop()
                 wf.stop()
-                pd.stop()
 
                 try:
                     audio_response = server.tts(ProactivePhrases.get(params['question']))    
@@ -306,8 +321,44 @@ def process_transition(transition, params):
                     proactive.update('confirm', 'who_are_you')
             else:
                 proactive.update('abort', 'who_are_you')
+            
+        elif params['question'] == 'read_pending_messages':
+            if eva_context['state'] in ['listening', 'idle_presence']:
+                eva_led.set(StaticColor('black'))
+                if eva_context['state'] == 'listening': mic.stop()
+                wf.stop()
+                if eva_context['state'] == 'idle_presence': pd.stop()
+                eva_context['state'] = 'processing_query'
 
-        
+                try:
+                    # Fusion messages
+                    text = '. '.join(
+                        f'{name} te ha escrito {"un mensaje que dice" if len(messages) == 1 else "varios mensajes que dicen"}: {". ".join(messages)}'
+                        for name, messages in params['messages'].items()
+                    )
+                    print(text)
+
+                    # Generate the audio
+                    audio_response = server.tts(text)    
+
+                except Exception as e:
+                    eva_context['continue_conversation'] = False
+                    eva_context['proactive_question'] = ''
+                    eva_context['state'] = 'speaking'
+                    eva_led.set(Breath('r'))
+                    speaker.start(connection_error_audio)
+
+                    proactive.update('abort', 'read_pending_messages')
+                else:
+                    eva_context['continue_conversation'] = False
+                    eva_context['state'] = 'speaking'
+                    eva_led.set(Breath('g'))
+                    speaker.start(audio_response)
+
+                    proactive.update('confirm', 'read_pending_messages')
+            else:
+                proactive.update('abort', 'read_pending_messages')
+
 
     elif transition == 'recording_face':
         eva_led.set(Progress(percentage=params['progress']))
@@ -321,7 +372,34 @@ def process_transition(transition, params):
             else:
                 eva_led.set(StaticColor('black'))
 
-    
+
+    elif transition == 'received_tg_message':
+        if eva_context['state'] in ['idle_presence', 'listening']:
+            eva_led.set(StaticColor('black'))
+            if eva_context['state'] == 'listening': mic.stop()
+            wf.stop()
+            if eva_context['state'] == 'idle_presence': pd.stop()
+            eva_context['state'] = 'processing_query'
+
+            try:
+                audio_response = server.tts(f'{params["name"]} te ha escrito un mensaje que dice: {params["message"]}')    
+            except Exception as e:
+                eva_context['continue_conversation'] = False
+                eva_context['proactive_question'] = ''
+                eva_context['state'] = 'speaking'
+                eva_led.set(Breath('r'))
+                speaker.start(connection_error_audio)
+
+            else:
+                eva_context['continue_conversation'] = False
+                eva_context['state'] = 'speaking'
+                eva_led.set(Breath('g'))
+                speaker.start(audio_response)
+        
+        else:
+            # Pass message to proactive service, to read it later
+            proactive.update('sensor', 'received_tg_message', params)
+
 
 
         
@@ -340,6 +418,8 @@ proactive = ProactiveService(proactive_service_event_handler)
 
 speaker = Speaker(speaker_event_handler)
 mic = Recorder(mic_event_handler)
+
+tg = TelegramService(tg_event_handler)
 
 eva_context = {'state':'idle', 'username':None, 'continue_conversation': False, 'proactive_question': ''}
 pd.start()
@@ -365,5 +445,6 @@ mic.stop()
 speaker.destroy()
 eva_led.stop()
 #eva_eyes.stop()
+tg.stop()
 
 logging.info(f'UI finished')

@@ -29,16 +29,26 @@ class ProactiveService():
         print('TIMER SETT')
         # TEST self.next_question_time = datetime.now() + timedelta(minutes=1)
 
+        self.tg_messages = {}
+
     
-    def update(self, type, subtype):
+    def update(self, type, subtype, args={}):
         if type == 'sensor':
             if subtype == 'presence':
                 # Ask the user 'How are you?'
                 if (self.next_question_time - datetime.now()).total_seconds() <= 0: 
                     self.callback('ask_how_are_you')
+                
+                if self.tg_messages:
+                    self.callback('read_pending_messages', self.tg_messages)
 
             elif subtype == 'unknown_face':
                 self.callback('ask_who_are_you')
+            
+            elif subtype == 'received_tg_message':
+                prev_messages = self.tg_messages.get(args['name'], [])
+                prev_messages.append(args['message'])
+                self.tg_messages[args['name']] = prev_messages
             
         elif type == 'abort':
             if subtype == 'how_are_you':
@@ -49,6 +59,9 @@ class ProactiveService():
             
             elif subtype == 'who_are_you':
                 pass
+            
+            elif subtype == 'read_pending_messages':
+                pass
         
         elif type == 'confirm':
             if subtype == 'how_are_you':
@@ -58,3 +71,6 @@ class ProactiveService():
 
             elif subtype == 'who_are_you':
                 pass
+            
+            elif subtype == 'read_pending_messages':
+                self.tg_messages.clear() # Clear messages
