@@ -208,13 +208,17 @@ class Wakeface(CameraService):
         return names
     
 
+
 class RecordFace(CameraService):
     def __init__(self, callback):
         super().__init__()
 
+        self.frames_to_encode = queue.Queue()
+
         self.callback = callback
         self.stopped = Event()
-        self._thread = None
+        self._thread_record = None
+        self._thread_encoder = None
         
         # load detection models
         self.detect_faces = FaceDetection(model_type=FaceDetectionModel.FRONT_CAMERA) # BACK_CAMERA FOR MORE RESOLUTION ; SHORT?
@@ -222,17 +226,21 @@ class RecordFace(CameraService):
         
     def start(self, name):
 
+        if self._thread_encoder is not None and self._thread_encoder.is_alive(): 
+            self.stopped.set() # ensure that any previous encoding thread  has finished
+            while not self.frames_to_encode.empty(): self.frames_to_encode.get(block=False)
+            self._thread_encoder.join()
+
         self.stopped.clear()
-        self._thread = Thread(target=self._run, args=(name,))
-        self._thread.start()
+        self._thread_record = Thread(target=self._run_record, args=(name,))
+        self._thread_encoder = Thread(target=self._run_encoder)
+        self._thread_record.start()
+        self._thread_encoder.start()
     
-    def _run(self, name, n_frames=6, n_augmented_images_per_frame=4):
+    def _run_record(self, name, n_frames=6):
 
         CameraService.camera.start(self.__class__.__name__)
 
-        augmenter = ImageDataGenerator(shear_range=0.1,
-                               horizontal_flip=True)
-        
         frames_recorded = 0
         frames_without_faces = 0
         while frames_recorded < n_frames and not self.stopped.is_set():
@@ -261,45 +269,57 @@ class RecordFace(CameraService):
                 ]
  
                 if bboxes_looking:
-
-                    # get encodings 
-                    #boxes = [(int(box.ymin), int(box.xmax), int(box.ymax), int(box.xmin)) for box in bboxes_looking]
-                    box = bboxes_looking[0] # take only the first box
-                    box_recog = (int(box.ymin), int(box.xmax), int(box.ymax), int(box.xmin)) # change format to (top, right, bottom, left)
-                    
-                    # compute the facial embeddings for the face bounding box
-                    #encodings = face_recognition.face_encodings(frame, box)
-                    #encoding = encodings[0]
-                    encoding = face_recognition.face_encodings(frame, [box_recog])[0] # take first encoding
-                    FaceDB.append(name, encoding)
+                    self.frames_to_encode.put((name, frame, bboxes_looking))                        
                     frames_recorded += 1
 
-                    '''
-                    face_crop = frame[int(box.ymin):int(box.ymax) + 1, int(box.xmin):int(box.xmax)+1]
-                    #face_crop = cv2.cvtColor(face_crop, cv2.COLOR_BGR2RGB)
-                    cv2.imwrite('test/Frame.jpg', face_crop)
-           
-                    augmented_images = next(augmenter.flow(np.array([face_crop, face_crop, face_crop]), batch_size=4))
-                    print('AAA,' ,augmented_images.shape)
-                    i = 0
-                    for face in augmented_images:
-                        shape = (0, face.shape[:2][1] - 1, face.shape[:2][0] - 1, 0 )
-                        print(shape)
-                        #encoding = face_recognition.face_encodings(face, [shape])
-                        #FaceDB.append(name, encoding)
-                        cv2.imwrite(f'test/Frame{i}.jpg', face)
-                        i+=1
-                    
-                    '''
                     self.callback('recording_face', progress=frames_recorded*100/n_frames)
         
         CameraService.camera.stop(self.__class__.__name__)
 
+    def _run_encoder(self, n_augmented_images_per_frame=3):
+        augmenter = ImageDataGenerator(shear_range=0.1,
+                               brightness_range=[0.5,1.5],
+                               rotation_range=15,
+                               width_shift_range=0.08,
+                               height_shift_range=0.08
+                               )
+
+        while True:
+            try:
+                name, frame, bboxes_looking = self.frames_to_encode.get(timeout=0.1)
+            except queue.Empty:
+                if not self.stopped.is_set():
+                    continue
+                else:
+                    break
+
+            # get encodings 
+            #boxes = [(int(box.ymin), int(box.xmax), int(box.ymax), int(box.xmin)) for box in bboxes_looking]
+            box = bboxes_looking[0] # take only the first box
+            box_recog = (int(box.ymin), int(box.xmax), int(box.ymax), int(box.xmin)) # change format to (top, right, bottom, left)
+            
+            # compute the facial embeddings for the face bounding box
+            #encodings = face_recognition.face_encodings(frame, box)
+            #encoding = encodings[0]
+            encoding = face_recognition.face_encodings(frame, [box_recog])[0] # take first encoding
+            FaceDB.append(name, encoding)
+
+            face_crop = frame[int(box.ymin):int(box.ymax) + 1, int(box.xmin):int(box.xmax)+1]
+
+            augmented_images = next(augmenter.flow(np.array([face_crop] * n_augmented_images_per_frame), batch_size=n_augmented_images_per_frame))
+            for face in augmented_images:
+                face = face.astype(np.uint8)
+                shape = (0, face.shape[1] - 1, face.shape[0] - 1, 0)
+                encoding = face_recognition.face_encodings(face, [shape])[0]
+                FaceDB.append(name, encoding)
+
+        print('encoder finished')
+
 
     def stop(self):
         self.stopped.set()
-        if self._thread is not None and self._thread.is_alive():
-            self._thread.join()
+        if self._thread_record is not None and self._thread_record.is_alive():
+            self._thread_record.join()
 
         
 class PresenceDetector(CameraService):
