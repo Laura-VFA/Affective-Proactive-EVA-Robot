@@ -55,11 +55,11 @@ class EvaEyes:
             try:
                 new_face = self.transition_faces.get(timeout=0.1)
                 print('start drawing')
-                aux = time.time()
+                #aux = time.time()
                 canvas = draw_face(new_face, EvaEyes.WIDTH, EvaEyes.HEIGHT)
-                print(time.time()-aux)
+                #print(time.time()-aux)
                 
-                #cv2.imshow("window", canvas)
+                cv2.imshow("window", canvas)
                 #time.sleep(0.033)
             except queue.Empty:
                 if time.time() > next_blink: # blink time
@@ -72,8 +72,8 @@ class EvaEyes:
                     next_blink = time.time() + random.randint(4,7)
                 continue
             finally:
-                #if cv2.waitKey(1) == ord('q'):
-                #    break    
+                if cv2.waitKey(1) == ord('q'):
+                    break    
                 pass
 
         cv2.destroyAllWindows()      

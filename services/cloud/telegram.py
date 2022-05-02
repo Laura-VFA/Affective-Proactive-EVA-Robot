@@ -8,6 +8,7 @@ import json
 import os
 import threading
 import time
+from difflib import get_close_matches
 
 from telethon import TelegramClient, events, functions
 
@@ -19,7 +20,7 @@ class TelegramService:
             tg_credentials = json.load(f)
 
         self.msg_callback = msg_callback
-        self._contacts = None
+        self._contacts = {}
 
         self.thread = threading.Thread(target=self._thread, args=(tg_credentials['api_id'], tg_credentials['api_hash']))
         self.thread.start()
@@ -35,10 +36,9 @@ class TelegramService:
 
         with self.client:
             self.client.add_event_handler(self.event_handler, events.NewMessage(incoming=True, func=lambda e: e.is_private))
-            self._contacts = {u.first_name + ((' ' + u.last_name) if u.last_name else ''): u.id for u in self.loop.run_until_complete(self.client(functions.contacts.GetContactsRequest(hash=0))).users}
+            self._contacts = {u.first_name.lower() + ((' ' + u.last_name.lower()) if u.last_name else ''): u.id for u in self.loop.run_until_complete(self.client(functions.contacts.GetContactsRequest(hash=0))).users}
             self.client.run_until_disconnected()
         self.loop.close()
-        print('Thread end')
 
     @property
     def contacts(self):
@@ -50,7 +50,9 @@ class TelegramService:
 
         Warning: This method can only be called from a thread different than the one running the asyncio event loop
         '''
-        user_id = self._contacts[name]
+        contact_name = get_close_matches(word=name.lower(), possibilities=self._contacts.keys(), n=1)[0]
+        print(contact_name)
+        user_id = self._contacts[contact_name]
 
         return asyncio.run_coroutine_threadsafe(self.client.send_message(user_id, message), self.loop).result()
 

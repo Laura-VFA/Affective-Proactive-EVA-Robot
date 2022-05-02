@@ -23,6 +23,9 @@ DELAY_TIMEOUT = 5 # in sec
 with open('files/connection_error.wav', 'rb') as f:
     connection_error_audio = f.read()
 
+with open('files/tg_contact_error.wav', 'rb') as f:
+    tg_contact_error_audio = f.read()
+
 
 def wf_event_handler(event, usernames=None):
     global eva_context
@@ -189,8 +192,12 @@ def process_transition(transition, params):
         audio = params['audio']
 
         try:
-            audio_response, action, continue_conversation, eva_mood = server.query(
-                audio, eva_context['username'], eva_context['proactive_question']
+            response = server.query(
+                server.Request(
+                    audio, 
+                    username=eva_context['username'], 
+                    proactive_question=eva_context['proactive_question']
+                )
             )
         except Exception:
             eva_context['continue_conversation'] = False
@@ -199,20 +206,34 @@ def process_transition(transition, params):
             eva_led.set(Breath('r'))
             speaker.start(connection_error_audio)
         else:
-            if action: # Execute associated action
-                # Switch with action types
-                if action[0] == 'record_face':
-                    eva_context['username'] = action[1]
-                    rf.start(action[1])
+            if response:
+                if response.action: # Execute associated action
+                    # Switch with action types
+                    if response.action == 'record_face':
+                        eva_context['username'] = response.username
+                        rf.start(response.username)
+                    elif response.action == 'update_target_name':
+                        # Get text from speech to get user destination name
+                        text = response.request.text.split()
+                        dst_name = ' '.join(text[text.index('a' if 'a' in text else 'para') + 1 :])
+                        eva_context['tg_destination_name'] = dst_name
+                        print(dst_name)
+                    elif response.action == 'send_message':
+                        msg = response.request.text
+                        try:
+                            tg.send_message(eva_context['tg_destination_name'], msg) # try con except key error por si el contacto no existe?
+                        except (KeyError, IndexError):
+                            response.audio = tg_contact_error_audio
+                        eva_context['tg_destination_name'] = ''
 
-            if audio_response:
-                eva_context['continue_conversation'] = continue_conversation 
+                eva_context['continue_conversation'] = response.continue_conversation
                 eva_context['proactive_question'] = ''
 
+                # Reproduce response                
                 eva_context['state'] = 'speaking'
                 #eva_eyes.set(eva_mood)
                 eva_led.set(Breath('b'))
-                speaker.start(audio_response)
+                speaker.start(response.audio)
             elif eva_context['continue_conversation']: # Avoid end the conversation due to noises
                 eva_context['state'] = 'listening_without_cam'
                 eva_led.set(Loop('b'))
@@ -248,6 +269,7 @@ def process_transition(transition, params):
         eva_context['state'] = 'idle_presence'
         eva_context['continue_conversation'] =  False
         eva_context['proactive_question'] =  ''
+        eva_context['tg_destination_name'] = ''
         #eva_eyes.set('neutral')
         eva_led.set(Close('blue'))
         mic.stop()
@@ -421,7 +443,14 @@ mic = Recorder(mic_event_handler)
 
 tg = TelegramService(tg_event_handler)
 
-eva_context = {'state':'idle', 'username':None, 'continue_conversation': False, 'proactive_question': ''}
+eva_context = {
+    'state':'idle', 
+    'username':None, 
+    'continue_conversation': False, 
+    'proactive_question': '', 
+    'tg_destination_name': ''
+}
+
 pd.start()
 
 
