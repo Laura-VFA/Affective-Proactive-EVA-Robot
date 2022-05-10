@@ -6,8 +6,8 @@ import face_recognition
 import numpy as np
 import pandas as pd
 from fdlite import FaceDetection, FaceDetectionModel, FaceIndex
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from PIL import Image
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
 from .camera import Camera
 from .presence_detector.object_detector import (ObjectDetector,
@@ -29,12 +29,16 @@ class FaceDB:
                 'encodings': df.loc[:, 1:128].to_numpy()
             }
         except pd.errors.EmptyDataError:
-            FaceDB.encodings = {'names':[], 'encodings':np.empty((0,128))}
+            FaceDB.encodings = {'names': [], 'encodings': np.empty((0,128))}
     
     @staticmethod
     def append(name, new_encoding):
         FaceDB.encodings['names'].append(name)
-        FaceDB.encodings['encodings'] = np.append(FaceDB.encodings['encodings'], np.expand_dims(new_encoding, axis=0), axis=0)
+        FaceDB.encodings['encodings'] = np.append(
+            FaceDB.encodings['encodings'],
+            np.expand_dims(new_encoding, axis=0),
+            axis=0
+        )
         
         with open(FaceDB.encodings_file, 'a') as f:
             f.write(';'.join([name, *[str(val) for val in new_encoding]]))
@@ -62,10 +66,10 @@ class Wakeface(CameraService):
         self._thread_wakeface = None
         self._thread_recognizer = None
 
-        self.face_queue = None
+        self.face_queue = None # Faces to recognize
         
         # load detection models
-        self.detect_faces = FaceDetection(model_type=FaceDetectionModel.FRONT_CAMERA) # BACK_CAMERA FOR MORE RESOLUTION ; SHORT?
+        self.detect_faces = FaceDetection(model_type=FaceDetectionModel.FRONT_CAMERA) # BACK_CAMERA for more resolution
         
         
     def start(self):
@@ -73,6 +77,9 @@ class Wakeface(CameraService):
         self.stopped.clear()
         self._thread_wakeface = Thread(target=self._run_detector)
         self._thread_recognizer = Thread(target=self._run_recognize)
+
+        self.face_queue = queue.Queue()
+
         self._thread_wakeface.start()
         self._thread_recognizer.start()
         
@@ -84,7 +91,7 @@ class Wakeface(CameraService):
         while not self.stopped.is_set():
             # Get frame
             frame = CameraService.camera.get_color_frame(resize=True)
-            (h, w) = frame.shape[:2]
+            h, w = frame.shape[:2]
 
             # Detect faces
             face_detections = self.detect_faces(
@@ -93,8 +100,9 @@ class Wakeface(CameraService):
             
             if not face_detections :
                 self.callback('not_faces')
-                while not self.face_queue.empty(): self.face_queue.get(block=True)
-                self.face_queue.put((None, []))
+                # Empty pending faces to recognize
+                while not self.face_queue.empty(): self.face_queue.get(block=True) 
+                self.face_queue.put((None, [])) # Notify recognition thread no faces detected
 
             else:
                 bboxes_looking = [ # Filter looking faces
@@ -105,16 +113,14 @@ class Wakeface(CameraService):
   
                 if not bboxes_looking : # No one looking
                     self.callback('face_not_listen') 
+                    # Empty pending faces to recognize
                     while not self.face_queue.empty(): self.face_queue.get(block=False)
-                    self.face_queue.put((None, []))
+                    self.face_queue.put((None, [])) # Notify recognition thread no looking faces detected
 
                 else:
                     self.callback('face_listen')
 
-                    #if not someone_was_looking: # Someone looking the first time
-                    #    someone_was_looking = True
-
-                    # FACE RECOGNITION  
+                    # Notify recognition thread about new looking faces detected
                     self.face_queue.put((frame, bboxes_looking))
                 
     
@@ -138,24 +144,21 @@ class Wakeface(CameraService):
         _, ym = face[FaceIndex.MOUTH]
         xn, yn = face[FaceIndex.NOSE_TIP]
 
-        # Range mapping
+        # Range mapping, normalize coordinates 
         # X axis
         xn = (xn - xl) / (xr - xl)
-        xl = 0
-        xr = 1
+
         # Y axis
         ye = (ye1 + ye2) / 2 # mean of both eyes
         yn = (yn - ye) / (ym - ye)
-        ye = 0 
-        ym = 1
+
 
         # Interval checking
-        return ((xl + incr)  <= xn <= (xr - incr))  and ((ye + incr) <= yn <= (ym - incr))
+        return (incr <= xn <= (1 - incr)) and (incr <= yn <= (1 - incr))
 
     def _run_recognize(self):
-        self.face_queue = queue.Queue()
 
-        face_history = {}
+        face_history = {} # Counter of previous recognized faces
 
         while not self.stopped.is_set():
             try:
@@ -165,35 +168,33 @@ class Wakeface(CameraService):
             
             if not bboxes:
                 face_history.clear()
-            elif not face_history or all(count < 3 if not name else False  for name, count in face_history.items()): # Execute recognizer until a face is recognized or None 3 times
+
+            # Execute recognizer until a face is recognized or None at least 3 times
+            elif not face_history or all(count < 3 if not name else False for name, count in face_history.items()):
                 names = set(self.recognize(frame, bboxes)) # Remove duplicates
-                print('recognized: ', names)
+                print('recognized: ', names) # TODO logging
                 face_history = {name: face_history.get(name, 0) + 1 for name in names} # Names counter
                 self.callback('face_recognized', usernames=face_history)
         
-    # https://pyimagesearch.com/2018/06/25/raspberry-pi-face-recognition/
     def recognize(self, frame, bboxes_looking):
+        ''' https://pyimagesearch.com/2018/06/25/raspberry-pi-face-recognition/ '''
         boxes = [(int(box.ymin), int(box.xmax), int(box.ymax), int(box.xmin)) for box in bboxes_looking]
         
-        # compute the facial embeddings for each face bounding box
         encodings = face_recognition.face_encodings(frame, boxes)
         names = []
-        # loop over the facial embeddings
+
         for encoding in encodings:
-            # attempt to match each face in the input image to our known
-            # encodings
             matches = face_recognition.compare_faces(FaceDB.encodings["encodings"],
                 encoding)
             name = None
-            # check to see if we have found a match
-            if True in matches:
-                # find the indexes of all matched faces then initialize a
+
+            if any(matches):
+                # find the indexes of all matched faces and initialize a
                 # dictionary to count the total number of times each face
                 # was matched
                 matchedIdxs = [i for (i, b) in enumerate(matches) if b]
                 counts = {}
-                # loop over the matched indexes and maintain a count for
-                # each recognized face face
+
                 for i in matchedIdxs:
                     name = FaceDB.encodings["names"][i]
                     counts[name] = counts.get(name, 0) + 1
@@ -201,8 +202,7 @@ class Wakeface(CameraService):
                 # of votes (note: in the event of an unlikely tie Python
                 # will select first entry in the dictionary)
                 name = max(counts, key=counts.get)
-            
-            # update the list of names
+
             names.append(name)
         
         return names
@@ -221,13 +221,13 @@ class RecordFace(CameraService):
         self._thread_encoder = None
         
         # load detection models
-        self.detect_faces = FaceDetection(model_type=FaceDetectionModel.FRONT_CAMERA) # BACK_CAMERA FOR MORE RESOLUTION ; SHORT?
+        self.detect_faces = FaceDetection(model_type=FaceDetectionModel.FRONT_CAMERA)
 
         
     def start(self, name):
 
         if self._thread_encoder is not None and self._thread_encoder.is_alive(): 
-            self.stopped.set() # ensure that any previous encoding thread  has finished
+            self.stopped.set() # ensure that any previous encoding thread has finished
             while not self.frames_to_encode.empty(): self.frames_to_encode.get(block=False)
             self._thread_encoder.join()
 
@@ -244,10 +244,10 @@ class RecordFace(CameraService):
         frames_recorded = 0
         frames_without_faces = 0
         while frames_recorded < n_frames and not self.stopped.is_set():
-            print('recording frame!!')
+            print('recording frame!!') # TODO logging
             # Get frame
             frame = CameraService.camera.get_color_frame(resize=True)
-            (h, w) = frame.shape[:2]
+            h, w = frame.shape[:2]
 
             # Detect faces
             face_detections = self.detect_faces(
@@ -257,6 +257,7 @@ class RecordFace(CameraService):
             if not face_detections:
                 frames_without_faces += 1
                 if frames_without_faces == 10:
+                    self.stopped.set()
                     break # Cancel face recording if there is no faces in 10 consecutive frames
 
             else:
@@ -293,19 +294,17 @@ class RecordFace(CameraService):
                 else:
                     break
 
-            # get encodings 
-            #boxes = [(int(box.ymin), int(box.xmax), int(box.ymax), int(box.xmin)) for box in bboxes_looking]
+            # Get encodings 
             box = bboxes_looking[0] # take only the first box
             box_recog = (int(box.ymin), int(box.xmax), int(box.ymax), int(box.xmin)) # change format to (top, right, bottom, left)
             
-            # compute the facial embeddings for the face bounding box
-            #encodings = face_recognition.face_encodings(frame, box)
-            #encoding = encodings[0]
-            encoding = face_recognition.face_encodings(frame, [box_recog])[0] # take first encoding
+            # Compute the facial embeddings for the face bounding box
+            encoding = face_recognition.face_encodings(frame, [box_recog])[0]
             FaceDB.append(name, encoding)
 
             face_crop = frame[int(box.ymin):int(box.ymax) + 1, int(box.xmin):int(box.xmax)+1]
 
+            # Apply data augmentation
             augmented_images = next(augmenter.flow(np.array([face_crop] * n_augmented_images_per_frame), batch_size=n_augmented_images_per_frame))
             for face in augmented_images:
                 face = face.astype(np.uint8)
@@ -313,30 +312,35 @@ class RecordFace(CameraService):
                 encoding = face_recognition.face_encodings(face, [shape])[0]
                 FaceDB.append(name, encoding)
 
-        print('encoder finished')
+        print('encoder finished') # TODO logging
 
 
     def stop(self):
         self.stopped.set()
         if self._thread_record is not None and self._thread_record.is_alive():
             self._thread_record.join()
+        # Don't wait for _thread_encoder to avoid blocking. 
+        # It will end itself when it finishes calculating embeddings
 
         
 class PresenceDetector(CameraService):
-    # Based on:
-    # Copyright 2021 The TensorFlow Authors. All Rights Reserved.
-    #
-    # Licensed under the Apache License, Version 2.0 (the "License");
-    # you may not use this file except in compliance with the License.
-    # You may obtain a copy of the License at
-    #
-    #     http://www.apache.org/licenses/LICENSE-2.0
-    #
-    # Unless required by applicable law or agreed to in writing, software
-    # distributed under the License is distributed on an "AS IS" BASIS,
-    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    # See the License for the specific language governing permissions and
-    # limitations under the License.
+    '''
+    Based on:
+
+    Copyright 2021 The TensorFlow Authors. All Rights Reserved.
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+        http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+    '''
 
     def __init__(self, callback, model='./services/presence_detector/efficientdet_lite0.tflite', 
                     num_threads=1) -> None:
@@ -367,7 +371,7 @@ class PresenceDetector(CameraService):
         while not self.stopped.is_set():
             frame = CameraService.camera.get_color_frame(resize=True)
 
-            # Run object detection estimation using the model.
+            # Run presence detection using the model
             detections = self.detector.detect(frame)
 
             if detections:
@@ -382,4 +386,3 @@ class PresenceDetector(CameraService):
             self._thread.join()
         
         CameraService.camera.stop(self.__class__.__name__)
-

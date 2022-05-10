@@ -286,7 +286,7 @@ def process_transition(transition, params):
                 pd.stop()
 
                 try:
-                    audio_response = server.tts(ProactivePhrases.get(params['question']))
+                    audio_response = server.text_to_speech(ProactivePhrases.get(params['question']))
                 except Exception as e:
                     eva_context['continue_conversation'] = False
                     eva_context['proactive_question'] = ''
@@ -320,7 +320,7 @@ def process_transition(transition, params):
                 wf.stop()
 
                 try:
-                    audio_response = server.tts(ProactivePhrases.get(params['question']))    
+                    audio_response = server.text_to_speech(ProactivePhrases.get(params['question']))    
                 except Exception as e:
                     eva_context['continue_conversation'] = False
                     eva_context['proactive_question'] = ''
@@ -361,7 +361,7 @@ def process_transition(transition, params):
                     print(text)
 
                     # Generate the audio
-                    audio_response = server.tts(text)    
+                    audio_response = server.text_to_speech(text)    
 
                 except Exception as e:
                     eva_context['continue_conversation'] = False
@@ -404,7 +404,7 @@ def process_transition(transition, params):
             eva_context['state'] = 'processing_query'
 
             try:
-                audio_response = server.tts(f'{params["name"]} te ha escrito un mensaje que dice: {params["message"]}')    
+                audio_response = server.text_to_speech(f'{params["name"]} te ha escrito un mensaje que dice: {params["message"]}')    
             except Exception as e:
                 eva_context['continue_conversation'] = False
                 eva_context['proactive_question'] = ''

@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 
-from .google_api import getSpeechFromText, getTextFromSpeech, translateEStoEN
-from .ibm_api import analyzeMood, createSession, genResponse, is_session_active
+from .google_api import speech_to_text, text_to_speech, translate_to
+from .ibm_api import (analyze_mood, create_session, generate_response,
+                      is_session_active)
 
 
 @dataclass
@@ -22,33 +23,33 @@ class Response:
     text: str = None
 
 
-def query(request : Request):
+def query(request: Request):
     # STT
-    request.text = getTextFromSpeech(request.audio)
-    print('L: ' + request.text)
+    request.text = speech_to_text(request.audio)
+    print('L: ' + request.text) # TODO logging
     
     if not request.text:
         return None
 
     # Translation (for emotion analysis)
-    translation = translateEStoEN(request.text)
+    translation = translate_to(request.text)
 
     # Emotion Analysis & other context variables
-    context_variables = analyzeMood(translation) 
+    context_variables = analyze_mood(translation) 
     context_variables["username"] = request.username
     context_variables["action"] = None
     context_variables["continue"] = ""
     context_variables["eva_mood"] = ""
     context_variables["proactive_question"] = request.proactive_question
-    print('L:', context_variables)
+    print('L:', context_variables) # TODO logging
 
     # Generate the response
-    text_response, user_skills = genResponse(request.text, context_variables)
-    print('E: ' + text_response)
+    text_response, user_skills = generate_response(request.text, context_variables)
+    print('E:' , text_response) # TODO logging
     print('E:', user_skills)
 
     # TTS
-    audio_response = getSpeechFromText(text_response)
+    audio_response = text_to_speech(text_response)
 
     # Send back the response
     return Response(
@@ -61,12 +62,7 @@ def query(request : Request):
         text_response
     )
 
-def tts(text):
-    return getSpeechFromText(text)
-
-def stt(audio):
-    return getTextFromSpeech(audio)
-
 def prepare():
+    # Check if session is alive: if not, create a new one
     if not is_session_active():
-        createSession()
+        create_session()
