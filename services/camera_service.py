@@ -1,4 +1,5 @@
 import queue
+from abc import ABC
 from threading import Event, Thread
 
 import cv2
@@ -49,7 +50,7 @@ class FaceDB:
         FaceDB.encodings.to_csv(FaceDB.encodings_file, sep=';')
 
 
-class CameraService:
+class CameraService(ABC):
     camera = None
     def __init__(self) -> None:
         if not CameraService.camera:
@@ -90,7 +91,7 @@ class Wakeface(CameraService):
 
         while not self.stopped.is_set():
             # Get frame
-            frame = CameraService.camera.get_color_frame(resize=True)
+            frame = CameraService.camera.get_color_frame(resize_width=500)
             h, w = frame.shape[:2]
 
             # Detect faces
@@ -246,7 +247,7 @@ class RecordFace(CameraService):
         while frames_recorded < n_frames and not self.stopped.is_set():
             print('recording frame!!') # TODO logging
             # Get frame
-            frame = CameraService.camera.get_color_frame(resize=True)
+            frame = CameraService.camera.get_color_frame(resize_width=500)
             h, w = frame.shape[:2]
 
             # Detect faces
@@ -369,7 +370,7 @@ class PresenceDetector(CameraService):
     def _run(self):
         CameraService.camera.start(self.__class__.__name__)
         while not self.stopped.is_set():
-            frame = CameraService.camera.get_color_frame(resize=True)
+            frame = CameraService.camera.get_color_frame(resize_width=500)
 
             # Run presence detection using the model
             detections = self.detector.detect(frame)

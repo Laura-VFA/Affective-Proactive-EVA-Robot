@@ -1,12 +1,14 @@
+from threading import Lock
+
+import imutils
 import numpy as np
 import pyrealsense2.pyrealsense2 as rs
-import imutils
-from threading import Lock
+
 
 class Camera:
     def __init__(self) -> None:
 
-        self.active_services = set()
+        self.active_services = set() # set of services using the camera
 
         self.pipeline = rs.pipeline()
         self.config = rs.config()
@@ -14,23 +16,20 @@ class Camera:
 
         self.lock = Lock()
 
-    
-    def get_color_frame(self, resize=False):
+    def get_color_frame(self, resize_width: int = None):
         frames = self.pipeline.wait_for_frames()
         color_image = np.asanyarray(frames.get_color_frame().get_data())
-        if not resize:
-            return color_image
-
-        return imutils.resize(color_image, width=500)
+        if resize_width:
+            return imutils.resize(color_image, width=resize_width)
+        return color_image
     
     def start(self, service):
-        with self.lock:
+        with self.lock: # exclusive access to set of services
             if not self.active_services:
                 self.pipeline.start(self.config)
             
             self.active_services.add(service)
 
-    
     def stop(self, service):
         with self.lock:
             if not self.active_services:

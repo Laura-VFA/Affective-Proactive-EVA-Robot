@@ -6,10 +6,11 @@ import webrtcvad
 
 
 class Recorder:
-    def __init__(self, callback, chunk_size=2048, format=pyaudio.paInt16, channels=1, rate = 16000, prev_audio_size=1.0) -> None:
+    def __init__(self, callback, chunk_size=2048, format=pyaudio.paInt16,
+                 channels=1, rate=16000, prev_audio_size=1.0, vad_agressiveness=3) -> None:
         self.chunk_size = chunk_size
         self.format = format
-        self.channels = channels # con 8 pasa cosa de que lo intenta reproducir a 8 channels
+        self.channels = channels
         self.rate = rate
         self.prev_audio_size = prev_audio_size  # Previous audio (in seconds) to prepend. When noise
                                         # is detected, how much of previously recorded audio is
@@ -17,11 +18,10 @@ class Recorder:
                                         # of the phrase.
     
         self.audio2send = []
-        #Prepend audio from 1.0 seconds before noise was detected
         self.prev_audio = deque(maxlen=int(prev_audio_size * rate/chunk_size)) 
         
         self.p = pyaudio.PyAudio()
-        self.vad = webrtcvad.Vad(3) # maximo agresivo
+        self.vad = webrtcvad.Vad(vad_agressiveness)
 
         self._thread = None
         self.stopped = Event()
@@ -30,10 +30,11 @@ class Recorder:
         self.callback = callback
 
     
-    def on_data(self, in_data, frame_count, time_info, flag):
+    def on_data(self, in_data, frame_count, time_info, flag): # Callback for recorded audio
         is_speech = False
 
-        for frame in frame_generator(30, in_data, self.rate):
+        # Detect if voice in the audio chunk
+        for frame in frame_generator(30, in_data, self.rate): # Vad requires audio frames of 10, 20 or 30 ms
             if self.vad.is_speech(frame, self.rate):
                 is_speech = True
                 break
@@ -41,13 +42,13 @@ class Recorder:
         if is_speech:
             if not self.start_recording.is_set():
                 self.audio2send = []
-                #print ("Starting record of phrase")
+                #print ("Starting record of phrase") TODO logging
                 self.start_recording.set()
                 self.audio2send.extend(self.prev_audio)
             self.audio2send.append(in_data)
 
         elif self.start_recording.is_set():
-            #print ("Finished recording")
+            #print ("Finished recording") TODO logging
             self.start_recording.clear()
             self.stop_recording.set()
             self.prev_audio = deque(maxlen=int(self.prev_audio_size * self.rate/self.chunk_size)) 
@@ -63,10 +64,10 @@ class Recorder:
     def start(self):
     
         self.stopped.clear()
-        self.start_recording.clear()
-        self.stop_recording.clear() # evento he parado de grabar
+        self.start_recording.clear() # Start recording event
+        self.stop_recording.clear() # Stop recording event
 
-        print( "* Mic opened ")
+        print( "* Mic opened ") # TODO logging
         self.stream = self.p.open(format=self.format,
                 channels=self.channels,
                 rate=self.rate,
@@ -79,15 +80,13 @@ class Recorder:
         self._thread.start()
 
     def _run(self):
-
-        #while not self.stopped.is_set():
         self.start_recording.wait()
         if self.stopped.is_set():
             return
 
         self.callback('start_recording')
 
-        self.stop_recording.wait()
+        self.stop_recording.wait() # Pause until recording has finished
         if self.stopped.is_set():
             return
 
@@ -97,7 +96,7 @@ class Recorder:
 
     def stop(self):
 
-        print( "* Mic closed ")
+        print( "* Mic closed ") # TODO logging
 
         self.stopped.set()
         self.start_recording.set()
@@ -110,16 +109,16 @@ class Recorder:
         self.start_recording.clear()
         self.stop_recording.clear()
 
-#https://github.com/wiseman/py-webrtcvad/blob/master/example.py
 def frame_generator(frame_duration_ms, audio, sample_rate):
     """Generates audio frames from PCM audio data.
     Takes the desired frame duration in milliseconds, the PCM data, and
     the sample rate.
     Yields Frames of the requested duration.
+
+    https://github.com/wiseman/py-webrtcvad/blob/master/example.py
     """
     n = int(sample_rate * (frame_duration_ms / 1000.0) * 2)
     offset = 0
     while offset + n < len(audio):
         yield audio[offset:offset + n]
         offset += n
-    

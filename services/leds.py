@@ -1,11 +1,12 @@
 import time
+from abc import ABC
 from math import pi, sin
 from threading import Event, Lock, Thread
 
 from matrix_lite import led
 
 
-class LedState:
+class LedState(ABC):
     def __init__(self):
         self.initial_led_state = 'black'
 
@@ -15,32 +16,23 @@ class LedState:
     def __eq__(self, other):
         return self.__class__ == other.__class__
 
-# Mood leds
-class Joy(LedState):
-    def __init__(self):
-        super().__init__()
-        self.interval = int(255 / led.length)
-        self.bright = [255 - i*self.interval for i in range(led.length)]
-        self.bright.extend(self.bright[::-1])
-        self.index = 0
-
-    def get_next_color(self):
-        next = {'r': self.bright[self.index], 'g': self.bright[self.index]}
-        self.index = (self.index + 1) % len(self.bright)
-
-        return next
-
 
 # Action leds
 class Loop(LedState):
     def __init__(self, rgbw_color):
         super().__init__()
-        self.rgbw_color = rgbw_color
+
+        if isinstance(rgbw_color, str): # Allow single or multichannel colors
+            self.rgbw_color = [rgbw_color] # Single channel
+        else:
+            self.rgbw_color = rgbw_color # Multiple channels in list/tuple
         self.index = 0
         interval = int(255 / led.length)
 
-        self.bright = [{rgbw_color: 255 - i * interval} for i in range(led.length)] * 2
-        
+        self.bright = [
+            {component: 255 - i * interval for component in self.rgbw_color} 
+            for i in range(led.length)
+        ] * 2
 
     def get_next_color(self):
         next = self.bright[self.index : self.index + led.length]
@@ -66,14 +58,18 @@ class Progress(LedState):
 class Breath(LedState):
     def __init__(self, rgbw_color):
         super().__init__()
-        self.rgbw_color = rgbw_color
+
+        if isinstance(rgbw_color, str): # Allow single or multichannel colors
+            self.rgbw_color = [rgbw_color] # Single channel
+        else:
+            self.rgbw_color = rgbw_color # Multiple channels in list/tuple
         self.interval = int(255 / led.length)
         self.bright = [255 - i*self.interval for i in range(led.length)]
         self.bright.extend(self.bright[::-1])
         self.index = 0
 
     def get_next_color(self):
-        next = {self.rgbw_color: self.bright[self.index]}
+        next = {component: self.bright[self.index] for component in self.rgbw_color}
         self.index = (self.index + 1) % len(self.bright)
 
         return next
@@ -81,9 +77,8 @@ class Breath(LedState):
     def __eq__(self, other):
         return super().__eq__(other) and self.rgbw_color == other.rgbw_color
 
-
 class StaticColor(LedState):
-    def __init__(self, color:str):
+    def __init__(self, color: str):
         super().__init__()
         self.initial_led_state = color
     
@@ -91,7 +86,7 @@ class StaticColor(LedState):
         return super().__eq__(other) and self.initial_led_state == other.initial_led_state
 
 class Close(LedState):
-    def __init__(self, color):
+    def __init__(self, color: str):
         super().__init__()
         self.color = color
         self.array = [color]*led.length
@@ -107,7 +102,6 @@ class Close(LedState):
         return super().__eq__(other) and self.color == other.color
 
 class Rainbow(LedState):
-
     def __init__(self):
         self.everloop = ['black'] * led.length
 
@@ -129,7 +123,7 @@ class Rainbow(LedState):
         return self.everloop
 
 
-class EvaLed:
+class MatrixLed:
     def __init__(self):
         self.state = StaticColor('black')
         led.set(self.state.initial_led_state)
@@ -138,7 +132,7 @@ class EvaLed:
         self.start()
     
     def set(self, ledState:'LedState'):
-        with self.lock:
+        with self.lock: # exclusive access to matrix led driver
             if self.state != ledState:
                 self.state = ledState
                 led.set(self.state.initial_led_state)
@@ -159,5 +153,3 @@ class EvaLed:
         self.stopped.set()
         self.thread.join()
         led.set('black')
-
-
