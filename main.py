@@ -377,7 +377,12 @@ def process_transition(transition, params):
                 try:
                     # Join messages (if several)
                     text = '. '.join(
-                        f'{name} te ha escrito {"un mensaje que dice" if len(messages) == 1 else "varios mensajes que dicen"}: {". ".join(messages)}'
+                        ProactivePhrases.get('single_tg_msg').format(
+                            name=name, msg=messages[0]
+                        ) if len(messages) == 1 
+                        else ProactivePhrases.get('multi_tg_msg').format(
+                                name=name, msg='. '.join(messages)
+                             )
                         for name, messages in params['messages'].items()
                     )
                     print(text) # TODO logging
@@ -426,7 +431,11 @@ def process_transition(transition, params):
             eva_context['state'] = 'processing_query'
 
             try:
-                audio_response = server.text_to_speech(f'{params["name"]} te ha escrito un mensaje que dice: {params["message"]}')    
+                audio_response = server.text_to_speech(
+                    ProactivePhrases.get('single_tg_msg').format(
+                        name=params["name"], msg=params["message"]
+                    )
+                )    
             except Exception as e: # Error in server connection
                 eva_context['continue_conversation'] = False
                 eva_context['proactive_question'] = ''
