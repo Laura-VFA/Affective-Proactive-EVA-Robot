@@ -15,7 +15,7 @@ class Eyes:
     WIDTH = 1080
     HEIGHT = 1920
 
-    def __init__(self, faces_dir='services/eyes/faces', face_cache='services/eyes/face_cache'):
+    def __init__(self, faces_dir='files/faces', face_cache='files/face_cache'):
         cv2.namedWindow("window", cv2.WND_PROP_FULLSCREEN)
         cv2.setWindowProperty("window",cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
 
