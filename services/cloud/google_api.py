@@ -7,7 +7,7 @@ from google.cloud import translate_v2 as translate
 from google.oauth2 import service_account
 
 # TTS 
-credentials = service_account.Credentials.from_service_account_file(os.environ.get('TTS_CREDENTIALS'))
+credentials = service_account.Credentials.from_service_account_file(os.environ.get('GOOGLE_CREDENTIALS'))
 clientTTS = texttospeech.TextToSpeechClient(credentials=credentials)
 voice = texttospeech.VoiceSelectionParams(
     language_code='es-ES',
@@ -19,7 +19,7 @@ tts_config = texttospeech.AudioConfig(
 )
 
 # STT 
-credentials = service_account.Credentials.from_service_account_file(os.environ.get('STT_CREDENTIALS'))
+credentials = service_account.Credentials.from_service_account_file(os.environ.get('GOOGLE_CREDENTIALS'))
 clientSTT = speech.SpeechClient(credentials=credentials)
 stt_config = speech.RecognitionConfig(
     encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
@@ -28,7 +28,7 @@ stt_config = speech.RecognitionConfig(
 )
 
 # Translator 
-credentials = service_account.Credentials.from_service_account_file(os.environ.get('TRANSLATOR_CREDENTIALS'))
+credentials = service_account.Credentials.from_service_account_file(os.environ.get('GOOGLE_CREDENTIALS'))
 translate_client = translate.Client(credentials=credentials)
 
 
