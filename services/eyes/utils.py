@@ -4,13 +4,15 @@ import cv2
 import numpy as np
 
 
-def get_face_from_file(filename):
+def get_face_from_file(filename: str) -> dict:
     with open(filename, 'r') as f:
         face_points = json.load(f)
     
     return face_points
 
 def make_bezier(xys):
+    """Code extracted from: https://stackoverflow.com/questions/246525/how-can-i-draw-a-bezier-curve-using-pythons-pil"""
+
     # xys should be a sequence of 2-tuples (Bezier control points)
     n = len(xys)
     combinations = pascal_row(n-1)
@@ -28,6 +30,7 @@ def make_bezier(xys):
     return bezier
 
 def pascal_row(n, memo={}):
+    """Code extracted from: https://stackoverflow.com/questions/246525/how-can-i-draw-a-bezier-curve-using-pythons-pil"""
     # This returns the nth row of Pascal's Triangle
     if n in memo:
         return memo[n]
@@ -47,11 +50,10 @@ def pascal_row(n, memo={}):
     memo[n] = result
     return result
 
-def get_bezier_points(points, resolution=100):
+def get_bezier_points(points: list, resolution=100) -> list:
     bezier = make_bezier(points)
-    return bezier([t/resolution for t in range(resolution+1)])  # Steps of interpolation (100 steps in this case)
+    return bezier([t/resolution for t in range(resolution+1)])  # Steps of interpolation (100 steps by default)
     
 def draw_bezier(img, points, color, thickness, lineType=cv2.LINE_AA, resolution=100):
     points = get_bezier_points(points, resolution)
     return cv2.polylines(img, [np.array(points).reshape((-1, 1, 2)).astype(np.int32)], False, color, thickness, lineType)
-

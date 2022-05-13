@@ -58,7 +58,7 @@ def query(request: Request):
         user_skills.get('action', None),
         user_skills.get('username', None),
         bool(user_skills.get('continue', '')),
-        user_skills.get('eva_mood', 'neutral'),
+        user_skills['eva_mood'] if 'eva_mood' in user_skills and user_skills['eva_mood'] else 'neutral',
         text_response
     )
 

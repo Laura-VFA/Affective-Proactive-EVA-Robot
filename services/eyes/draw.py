@@ -18,8 +18,8 @@ def draw_face(face_points, width=1080, height=1920):
         g_eye_center = np.array(face_points['eyes'][side]['center'])
         eye_axes = np.array([face_points['eyes'][side]['width']//2, face_points['eyes'][side]['height']//2])
 
-        # Get eye region
-        reg_offset = np.array([5, 5])
+        # Get eye region to draw the eye locally
+        reg_offset = np.array([5, 5]) # Incrementation of the countour, for getting correct line thickness 
         eye_region = canvas[
             g_eye_center[1]- eye_axes[1] - reg_offset[1]: g_eye_center[1]+ eye_axes[1] + reg_offset[0], 
             g_eye_center[0]- eye_axes[0] - reg_offset[1]: g_eye_center[0]+ eye_axes[0] + reg_offset[0]
@@ -58,7 +58,7 @@ def draw_face(face_points, width=1080, height=1920):
         mask_lid = cv2.bitwise_and(mask_lid_bottom, mask_lid)
         mask_lid = cv2.bitwise_and(mask_lid, mask_eye)
 
-        # Draw the eye lid line
+        # Draw the eye lid lines (top and bottom)
         eye_region = draw_bezier(eye_region, eyelid_top_pts, (0,0,0), 7)
         eye_region = draw_bezier(eye_region, eyelid_bottom_pts, (0,0,0), 7)
 
@@ -70,7 +70,5 @@ def draw_face(face_points, width=1080, height=1920):
 
     return canvas
 
-def draw_face_from_file(filename):  
+def draw_face_from_file(filename: str):  
     return draw_face(get_face_from_file(filename))
-
-

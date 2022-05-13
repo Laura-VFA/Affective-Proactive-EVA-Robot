@@ -6,7 +6,7 @@ from services.camera_service import (FaceDB, PresenceDetector, RecordFace,
                                      Wakeface)
 from services.cloud import server
 from services.cloud.telegram import TelegramService
-from services.eyes.eva_eyes import EvaEyes
+from services.eyes.service import Eyes
 from services.leds import *
 from services.mic import Recorder
 from services.proactive_service import ProactivePhrases, ProactiveService
@@ -245,7 +245,7 @@ def process_transition(transition, params):
 
                 # Reproduce response                
                 eva_context['state'] = 'speaking'
-                #eva_eyes.set(response.eva_mood)
+                eyes.set(response.eva_mood)
                 leds.set(Breath('b'))
                 speaker.start(response.audio)
 
@@ -259,7 +259,7 @@ def process_transition(transition, params):
                 listen_timer.start()
 
             else:
-                #eva_eyes.set('neutral')
+                eyes.set('neutral')
                 leds.set(StaticColor('black'))
                 eva_context['state'] = 'idle_presence'
                 pd.start()
@@ -289,7 +289,7 @@ def process_transition(transition, params):
         eva_context['continue_conversation'] =  False
         eva_context['proactive_question'] =  ''
         eva_context['tg_destination_name'] = ''
-        #eva_eyes.set('neutral')
+        eyes.set('neutral')
         leds.set(Close('blue'))
         mic.stop()
         rf.stop()
@@ -458,7 +458,7 @@ def process_transition(transition, params):
 if __name__ == '__main__':
     
     leds = MatrixLed()
-    #eva_eyes = EvaEyes()
+    eyes = Eyes()
     FaceDB.load() # load face embeddings
     ProactivePhrases.load()
 
@@ -494,7 +494,7 @@ if __name__ == '__main__':
     mic.stop()
     speaker.destroy()
     leds.stop()
-    #eva_eyes.stop()
+    eyes.stop()
     tg.stop()
 
     logging.info(f'UI finished')

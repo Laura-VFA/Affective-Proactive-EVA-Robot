@@ -1,7 +1,5 @@
 # Google services wrapper
 # (TTS, STT and translation)
-import os
-
 from google.cloud import speech, texttospeech
 from google.cloud import translate_v2 as translate
 
