@@ -13,9 +13,13 @@ from services.proactive_service import ProactivePhrases, ProactiveService
 from services.speaker import Speaker
 
 # Logging configuration
-logging.basicConfig(filename='./logs/UI.log', format='%(asctime)s - %(levelname)s - %(name)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S', level=logging.INFO)
+#logging.basicConfig(filename='./logs/UI.log', format='%(asctime)s - %(levelname)s - %(name)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S', level=logging.INFO)
 #log = logging.getLogger('STDERR')
 
+import logging
+import logging.config
+
+logging.config.fileConfig('files/logging.conf')
 
 
 eva_context = { # Eva status & knowledge of the environment
@@ -245,7 +249,7 @@ def process_transition(transition, params):
 
                 # Reproduce response                
                 eva_context['state'] = 'speaking'
-                eyes.set(response.eva_mood)
+                #eyes.set(response.eva_mood)
                 leds.set(Breath('b'))
                 speaker.start(response.audio)
 
@@ -259,7 +263,7 @@ def process_transition(transition, params):
                 listen_timer.start()
 
             else:
-                eyes.set('neutral')
+                #eyes.set('neutral')
                 leds.set(StaticColor('black'))
                 eva_context['state'] = 'idle_presence'
                 pd.start()
@@ -289,7 +293,7 @@ def process_transition(transition, params):
         eva_context['continue_conversation'] =  False
         eva_context['proactive_question'] =  ''
         eva_context['tg_destination_name'] = ''
-        eyes.set('neutral')
+        #eyes.set('neutral')
         leds.set(Close('blue'))
         mic.stop()
         rf.stop()
@@ -458,7 +462,7 @@ def process_transition(transition, params):
 if __name__ == '__main__':
     
     leds = MatrixLed()
-    eyes = Eyes()
+    #eyes = Eyes()
     FaceDB.load() # load face embeddings
     ProactivePhrases.load()
 
@@ -494,7 +498,7 @@ if __name__ == '__main__':
     mic.stop()
     speaker.destroy()
     leds.stop()
-    eyes.stop()
+    #eyes.stop()
     tg.stop()
 
-    logging.info(f'UI finished')
+    #logging.info(f'UI finished')

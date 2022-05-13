@@ -1,3 +1,4 @@
+import logging
 import os
 import queue
 import random
@@ -16,6 +17,9 @@ class Eyes:
     HEIGHT = 1920
 
     def __init__(self, faces_dir='files/faces', face_cache='files/face_cache'):
+        self.logger = logging.getLogger('Eyes')
+        self.logger.setLevel(logging.DEBUG)
+
         cv2.namedWindow("window", cv2.WND_PROP_FULLSCREEN)
         cv2.setWindowProperty("window",cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
 
@@ -30,6 +34,9 @@ class Eyes:
 
         self.stopped = Event()
         self.lock = Lock() # Semaphore for concurrent variables access control
+
+        self.logger.info('Ready')
+
         self.start()
     
     def _set(self, face, steps=3):
@@ -42,6 +49,8 @@ class Eyes:
                 self.transition_faces.put((f'{self.current_face}TO{face}_{index+1}of{steps}', face_points))
 
             self.transition_faces.put((face,target_face))
+
+            self.logger.info(f'Queued transitions from {self.current_face} to {face}')
 
             # Update current face
             self.current_face_points = target_face
@@ -92,3 +101,5 @@ class Eyes:
     def stop(self):
         self.stopped.set()
         self.thread.join()
+
+        self.logger.info('Stopped')

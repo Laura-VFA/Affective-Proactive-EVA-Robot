@@ -1,3 +1,4 @@
+import logging
 import time
 from abc import ABC
 from math import pi, sin
@@ -125,19 +126,28 @@ class Rainbow(LedState):
 
 class MatrixLed:
     def __init__(self):
+        self.logger = logging.getLogger('Leds')
+        self.logger.setLevel(logging.DEBUG)
+
         self.state = StaticColor('black')
         led.set(self.state.initial_led_state)
         self.stopped = Event()
         self.lock = Lock()
+
+        self.logger.info('Ready')
+
         self.start()
     
     def set(self, ledState:'LedState'):
         with self.lock: # exclusive access to matrix led driver
             if self.state != ledState:
+                self.logger.info(f'Changing leds from {self.state.__class__.__name__} to {ledState.__class__.__name__}')
                 self.state = ledState
                 led.set(self.state.initial_led_state)
     
     def _run(self):
+        self.logger.info('Started')
+
         while not self.stopped.is_set():
             next_color = self.state.get_next_color()
             if next_color is not None:
@@ -153,3 +163,5 @@ class MatrixLed:
         self.stopped.set()
         self.thread.join()
         led.set('black')
+
+        self.logger.info('Stopped')

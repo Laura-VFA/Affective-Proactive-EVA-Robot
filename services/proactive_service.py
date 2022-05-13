@@ -1,4 +1,5 @@
 import json
+import logging
 import random
 from datetime import datetime, timedelta
 
@@ -21,18 +22,25 @@ class ProactivePhrases:
 
 class ProactiveService:
     def __init__(self, callback) -> None:
+        self.logger = logging.getLogger('Proactive')
+        self.logger.setLevel(logging.DEBUG)
+
         self.question = None
         self.callback = callback
 
         # Put an alarm every day at 8 am to ask for user mood
         self.next_question_time = (datetime.now() + timedelta(days=1)).replace(hour=8,minute=0)
-        # print('TIMER SETT') TODO logging
+        self.logger.info(f'First how_are_you set at {self.next_question_time}')
         # [TEST] self.next_question_time = datetime.now() + timedelta(minutes=1)
 
         self.tg_messages = {} # Telegram pending incoming messages
 
+        self.logger.info('Ready')
+
     
     def update(self, type, subtype, args={}):
+        self.logger.info(f'Update {type}::{subtype} - {args}')
+
         if type == 'sensor':
             if subtype == 'presence':
                 # Timeout, ask 'How are you?'
@@ -54,7 +62,7 @@ class ProactiveService:
             if subtype == 'how_are_you':
                 # Postpone the timer 2 hours
                 self.next_question_time = datetime.now() + timedelta(hours=2)
-                print('TIMER POSTPONED') # TODO logging
+                self.logger.info(f'{subtype} postponed until {self.next_question_time}')
                 # [TEST] self.next_question_time = datetime.now() + timedelta(seconds=30)
             
             elif subtype == 'who_are_you':
@@ -66,7 +74,7 @@ class ProactiveService:
         elif type == 'confirm': # Questions asked
             if subtype == 'how_are_you': # Put again a timer tomorrow at 8 am
                 self.next_question_time = (datetime.now() + timedelta(days=1)).replace(hour=8,minute=0)
-                print('TIMER SETT') # TODO logging
+                self.logger.info(f'Next {subtype} set at {self.next_question_time}')
                 # [TEST] self.next_question_time = datetime.now() + timedelta(minutes=1)
 
             elif subtype == 'who_are_you':

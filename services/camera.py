@@ -1,3 +1,4 @@
+import logging
 from threading import Lock
 
 import imutils
@@ -7,6 +8,8 @@ import pyrealsense2.pyrealsense2 as rs
 
 class Camera:
     def __init__(self) -> None:
+        self.logger = logging.getLogger('Camera')
+        self.logger.setLevel(logging.DEBUG)
 
         self.active_services = set() # set of services using the camera
 
@@ -15,6 +18,8 @@ class Camera:
         self.config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
 
         self.lock = Lock()
+
+        self.logger.info('Ready')
 
     def get_color_frame(self, resize_width: int = None):
         frames = self.pipeline.wait_for_frames()
@@ -29,6 +34,8 @@ class Camera:
                 self.pipeline.start(self.config)
             
             self.active_services.add(service)
+        
+        self.logger.info(f'Service {service} enabled')
 
     def stop(self, service):
         with self.lock:
@@ -40,3 +47,5 @@ class Camera:
             if not self.active_services:
                 self.pipeline.poll_for_frames() # clear last frame buffer
                 self.pipeline.stop()
+        
+        self.logger.info(f'Service {service} disabled')

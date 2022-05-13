@@ -1,3 +1,4 @@
+import logging
 from collections import deque
 from threading import Event, Thread
 
@@ -8,6 +9,9 @@ import webrtcvad
 class Recorder:
     def __init__(self, callback, chunk_size=2048, format=pyaudio.paInt16,
                  channels=1, rate=16000, prev_audio_size=1.0, vad_agressiveness=3) -> None:
+        self.logger = logging.getLogger('Mic')
+        self.logger.setLevel(logging.DEBUG)
+
         self.chunk_size = chunk_size
         self.format = format
         self.channels = channels
@@ -29,6 +33,7 @@ class Recorder:
         self.stop_recording = Event()
         self.callback = callback
 
+        self.logger.info('Ready')
     
     def on_data(self, in_data, frame_count, time_info, flag): # Callback for recorded audio
         is_speech = False
@@ -42,13 +47,11 @@ class Recorder:
         if is_speech:
             if not self.start_recording.is_set():
                 self.audio2send = []
-                #print ("Starting record of phrase") TODO logging
                 self.start_recording.set()
                 self.audio2send.extend(self.prev_audio)
             self.audio2send.append(in_data)
 
         elif self.start_recording.is_set():
-            #print ("Finished recording") TODO logging
             self.start_recording.clear()
             self.stop_recording.set()
             self.prev_audio = deque(maxlen=int(self.prev_audio_size * self.rate/self.chunk_size)) 
@@ -62,12 +65,11 @@ class Recorder:
 
     
     def start(self):
-    
+
         self.stopped.clear()
         self.start_recording.clear() # Start recording event
         self.stop_recording.clear() # Stop recording event
 
-        print( "* Mic opened ") # TODO logging
         self.stream = self.p.open(format=self.format,
                 channels=self.channels,
                 rate=self.rate,
@@ -79,24 +81,27 @@ class Recorder:
         self._thread = Thread(target=self._run)
         self._thread.start()
 
+        self.logger.info('Mic opened')
+
     def _run(self):
         self.start_recording.wait()
         if self.stopped.is_set():
             return
 
+        self.logger.info('Started recording')
         self.callback('start_recording')
 
         self.stop_recording.wait() # Pause until recording has finished
         if self.stopped.is_set():
             return
 
+        self.logger.info('Stopped recording')
         self.callback('stop_recording', b''.join(self.audio2send))
         self.stream.close()
 
 
     def stop(self):
-
-        print( "* Mic closed ") # TODO logging
+        self.logger.info("Mic closed")
 
         self.stopped.set()
         self.start_recording.set()

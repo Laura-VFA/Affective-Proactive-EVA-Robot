@@ -1,3 +1,4 @@
+import logging
 import queue
 from abc import ABC
 from threading import Event, Thread
@@ -53,6 +54,9 @@ class FaceDB:
 class CameraService(ABC):
     camera = None
     def __init__(self) -> None:
+        self.logger = logging.getLogger(type(self).__name__)
+        self.logger.setLevel(logging.DEBUG)
+
         if not CameraService.camera:
             CameraService.camera = Camera()
 
@@ -72,6 +76,7 @@ class Wakeface(CameraService):
         # load detection models
         self.detect_faces = FaceDetection(model_type=FaceDetectionModel.FRONT_CAMERA) # BACK_CAMERA for more resolution
         
+        self.logger.info('Ready')
         
     def start(self):
 
@@ -86,6 +91,7 @@ class Wakeface(CameraService):
         
     
     def _run_detector(self):
+        self.logger.info('Detector started')
 
         CameraService.camera.start(self.__class__.__name__)
 
@@ -135,6 +141,8 @@ class Wakeface(CameraService):
 
         CameraService.camera.stop(self.__class__.__name__)
 
+        self.logger.info('Stopped')
+
     @staticmethod
     def check_looking(face, incr=0.25):
         # WAKEFACE
@@ -158,6 +166,7 @@ class Wakeface(CameraService):
         return (incr <= xn <= (1 - incr)) and (incr <= yn <= (1 - incr))
 
     def _run_recognize(self):
+        self.logger.info('Recognizer started')
 
         face_history = {} # Counter of previous recognized faces
 
@@ -173,9 +182,10 @@ class Wakeface(CameraService):
             # Execute recognizer until a face is recognized or None at least 3 times
             elif not face_history or all(count < 3 if not name else False for name, count in face_history.items()):
                 names = set(self.recognize(frame, bboxes)) # Remove duplicates
-                print('recognized: ', names) # TODO logging
                 face_history = {name: face_history.get(name, 0) + 1 for name in names} # Names counter
                 self.callback('face_recognized', usernames=face_history)
+
+                self.logger.info(f'Recognized history updated: {face_history}')
         
     def recognize(self, frame, bboxes_looking):
         ''' https://pyimagesearch.com/2018/06/25/raspberry-pi-face-recognition/ '''
@@ -224,6 +234,8 @@ class RecordFace(CameraService):
         # load detection models
         self.detect_faces = FaceDetection(model_type=FaceDetectionModel.FRONT_CAMERA)
 
+        self.logger.info('Ready')
+
         
     def start(self, name):
 
@@ -239,13 +251,13 @@ class RecordFace(CameraService):
         self._thread_encoder.start()
     
     def _run_record(self, name, n_frames=6):
+        self.logger.info('Recorder started')
 
         CameraService.camera.start(self.__class__.__name__)
 
         frames_recorded = 0
         frames_without_faces = 0
         while frames_recorded < n_frames and not self.stopped.is_set():
-            print('recording frame!!') # TODO logging
             # Get frame
             frame = CameraService.camera.get_color_frame(resize_width=500)
             h, w = frame.shape[:2]
@@ -258,6 +270,8 @@ class RecordFace(CameraService):
             if not face_detections:
                 frames_without_faces += 1
                 if frames_without_faces == 10:
+                    self.logger.info('10 consecutive frames without faces')
+
                     self.stopped.set()
                     break # Cancel face recording if there is no faces in 10 consecutive frames
 
@@ -273,12 +287,17 @@ class RecordFace(CameraService):
                 if bboxes_looking:
                     self.frames_to_encode.put((name, frame, bboxes_looking))                        
                     frames_recorded += 1
-
+                    
+                    self.logger.info('Face frame recorded')
                     self.callback('recording_face', progress=frames_recorded*100/n_frames)
         
         CameraService.camera.stop(self.__class__.__name__)
 
+        self.logger.info('Recorder stopped')
+
     def _run_encoder(self, n_augmented_images_per_frame=3):
+        self.logger.info('Encoder started')
+
         augmenter = ImageDataGenerator(shear_range=0.1,
                                brightness_range=[0.5,1.5],
                                rotation_range=15,
@@ -294,6 +313,8 @@ class RecordFace(CameraService):
                     continue
                 else:
                     break
+                    
+            self.logger.info('Encoding frame faces')
 
             # Get encodings 
             box = bboxes_looking[0] # take only the first box
@@ -313,7 +334,7 @@ class RecordFace(CameraService):
                 encoding = face_recognition.face_encodings(face, [shape])[0]
                 FaceDB.append(name, encoding)
 
-        print('encoder finished') # TODO logging
+        self.logger.info('Encoder stopped')
 
 
     def stop(self):
@@ -360,6 +381,8 @@ class PresenceDetector(CameraService):
             label_allow_list = ['person']
         )
         self.detector = ObjectDetector(model_path=model, options=options)
+
+        self.logger.info('Ready')
     
     def start(self):
 
@@ -368,6 +391,8 @@ class PresenceDetector(CameraService):
         self._thread.start()
     
     def _run(self):
+        self.logger.info('Started')
+
         CameraService.camera.start(self.__class__.__name__)
         while not self.stopped.is_set():
             frame = CameraService.camera.get_color_frame(resize_width=500)
@@ -387,3 +412,5 @@ class PresenceDetector(CameraService):
             self._thread.join()
         
         CameraService.camera.stop(self.__class__.__name__)
+
+        self.logger.info('Stopped')
