@@ -4,11 +4,10 @@ import os
 
 from google.cloud import speech, texttospeech
 from google.cloud import translate_v2 as translate
-from google.oauth2 import service_account
 
-# TTS 
-credentials = service_account.Credentials.from_service_account_file(os.environ.get('GOOGLE_CREDENTIALS'))
-clientTTS = texttospeech.TextToSpeechClient(credentials=credentials)
+
+# TTS
+clientTTS = texttospeech.TextToSpeechClient()
 voice = texttospeech.VoiceSelectionParams(
     language_code='es-ES',
     ssml_gender=texttospeech.SsmlVoiceGender.FEMALE
@@ -19,8 +18,7 @@ tts_config = texttospeech.AudioConfig(
 )
 
 # STT 
-credentials = service_account.Credentials.from_service_account_file(os.environ.get('GOOGLE_CREDENTIALS'))
-clientSTT = speech.SpeechClient(credentials=credentials)
+clientSTT = speech.SpeechClient()
 stt_config = speech.RecognitionConfig(
     encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
     sample_rate_hertz=16000,
@@ -28,8 +26,7 @@ stt_config = speech.RecognitionConfig(
 )
 
 # Translator 
-credentials = service_account.Credentials.from_service_account_file(os.environ.get('GOOGLE_CREDENTIALS'))
-translate_client = translate.Client(credentials=credentials)
+translate_client = translate.Client()
 
 
 
@@ -48,8 +45,11 @@ def text_to_speech(text):
 
     return response.audio_content
 
-def translate_to(text, target_language='en'):
-    # Origin language is automatically detected
-    result = translate_client.translate(text, target_language=target_language)
+def translate_to(text, source_lang='es', target_lang='en'):
+    result = translate_client.translate(
+        text,
+        source_language=source_lang,
+        target_language=target_lang
+    )
 
     return result["translatedText"]
