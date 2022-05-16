@@ -1,8 +1,13 @@
+import logging
 from dataclasses import dataclass
 
 from .google_api import speech_to_text, text_to_speech, translate_to
 from .ibm_api import (analyze_mood, create_session, generate_response,
                       is_session_active)
+
+
+logger = logging.getLogger('Server')
+logger.setLevel(logging.DEBUG)
 
 
 @dataclass
@@ -26,13 +31,14 @@ class Response:
 def query(request: Request):
     # STT
     request.text = speech_to_text(request.audio)
-    print('L: ' + request.text) # TODO logging
+    logger.info(f"STT result :: '{request.text}'")
     
     if not request.text:
         return None
 
     # Translation (for emotion analysis)
     translation = translate_to(request.text)
+    logger.info(f'Translation result :: {translation}')
 
     # Emotion Analysis & other context variables
     context_variables = analyze_mood(translation) 
@@ -40,13 +46,13 @@ def query(request: Request):
     context_variables["action"] = None
     context_variables["continue"] = ""
     context_variables["eva_mood"] = ""
-    context_variables["proactive_question"] = request.proactive_question
-    print('L:', context_variables) # TODO logging
+    context_variables["proactive_question"] = request.proactive_question 
+    logger.info(f'Query context :: {context_variables}')
 
     # Generate the response
     text_response, user_skills = generate_response(request.text, context_variables)
-    print('E:' , text_response) # TODO logging
-    print('E:', user_skills)
+    logger.info(f'Response text :: {text_response}')
+    logger.info(f'Response context :: {user_skills}')
 
     # TTS
     audio_response = text_to_speech(text_response)
@@ -66,3 +72,5 @@ def prepare():
     # Check if session is alive: if not, create a new one
     if not is_session_active():
         create_session()
+
+        logger.info('New IBM session created')

@@ -1,8 +1,9 @@
 import logging
+import logging.config
 import queue
 import threading
 
-from services.camera_service import (FaceDB, PresenceDetector, RecordFace,
+from services.camera_services import (FaceDB, PresenceDetector, RecordFace,
                                      Wakeface)
 from services.cloud import server
 from services.cloud.telegram import TelegramService
@@ -12,14 +13,10 @@ from services.mic import Recorder
 from services.proactive_service import ProactivePhrases, ProactiveService
 from services.speaker import Speaker
 
-# Logging configuration
-#logging.basicConfig(filename='./logs/UI.log', format='%(asctime)s - %(levelname)s - %(name)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S', level=logging.INFO)
-#log = logging.getLogger('STDERR')
-
-import logging
-import logging.config
 
 logging.config.fileConfig('files/logging.conf')
+logger = logging.getLogger('Main')
+logger.setLevel(logging.DEBUG)
 
 
 eva_context = { # Eva status & knowledge of the environment
@@ -55,14 +52,12 @@ def wf_event_handler(event, usernames=None):
             notifications.put({'transition': 'listening2idle_presence'})
         
     elif event == 'face_recognized':
-        print(usernames) # TODO logging
-
         known_names = [name for name in usernames if name] # remove None names
         if known_names:
             # Sort names by number of consecutive frames recognized
             known_names = sorted(usernames, key=lambda name: usernames[name], reverse=True)
             eva_context['username'] = known_names[0]
-            print('username updated to', eva_context['username']) # TODO logging
+            logger.info(f"Username updated to {eva_context['username']}")
 
         elif None in usernames and usernames[None] >= 3: # Detect 3 unknown in a row
             proactive.update('sensor', 'unknown_face')
@@ -85,7 +80,7 @@ def pd_event_handler(event):
     
     elif event == 'empty_room'  and eva_context['state'] == 'idle_presence' :
         notifications.put({'transition': 'idle_presence2idle'})
-    
+
 def mic_event_handler(event, audio=None):
     global eva_context
 
@@ -154,6 +149,8 @@ def listen_timeout_handler():
 def process_transition(transition, params):
     global eva_context, listen_timer
 
+    logger.info(f'Handling transition {transition}')
+
     # User presence detected in the room
     if transition == 'idle2idle_presence' and eva_context['state'] == 'idle':
         leds.set(StaticColor('purple'))
@@ -188,7 +185,7 @@ def process_transition(transition, params):
         try:
             server.prepare() # Create session in advance if necessary
         except Exception as e:
-            pass # TODO: logging
+            logger.warning(f'Could not create the IBM session. {str(e)}')
         wf.stop()
     
     # User in conversation starts talking
@@ -198,7 +195,7 @@ def process_transition(transition, params):
         try:
             server.prepare() # Create session in advance if necessary
         except Exception as e:
-            pass # TODO: logging
+            logger.warning(f'Could not create the IBM session. {str(e)}')
 
         listen_timer.cancel()
 
@@ -218,7 +215,9 @@ def process_transition(transition, params):
                     proactive_question=eva_context['proactive_question']
                 )
             )
-        except Exception: # Unable to connect to the server: play error msg
+        except Exception as e: # Unable to connect to the server: play error msg
+            logger.error(f'Could not make the query. {str(e)}')
+
             eva_context['continue_conversation'] = False
             eva_context['proactive_question'] = ''
             eva_context['state'] = 'speaking'
@@ -235,12 +234,13 @@ def process_transition(transition, params):
                         text = response.request.text.split()
                         dst_name = ' '.join(text[text.index('a' if 'a' in text else 'para') + 1 :])
                         eva_context['tg_destination_name'] = dst_name
-                        print(dst_name) # TODO logging
                     elif response.action == 'send_message': # Send telegram message
                         msg = response.request.text
                         try:
                             tg.send_message(eva_context['tg_destination_name'], msg)
                         except (KeyError, IndexError): # Contact not found
+                            logger.error(f"Target user '{eva_context['tg_destination_name']}' not found in TG contacts list")
+
                             response.audio = tg_contact_error_audio
                         eva_context['tg_destination_name'] = '' # Clear target name
 
@@ -254,6 +254,9 @@ def process_transition(transition, params):
                 speaker.start(response.audio)
 
             elif eva_context['continue_conversation']: # Avoid end the conversation due to noises
+                logger.info(f'Not text in audio, continuing conversation')
+                logger.info(f'Handling transition processing_query2listening_without_cam')
+
                 eva_context['state'] = 'listening_without_cam'
                 leds.set(Loop('b'))
                 mic.start()
@@ -263,6 +266,9 @@ def process_transition(transition, params):
                 listen_timer.start()
 
             else:
+                logger.info(f'Not text in audio, back to idle')
+                logger.info(f'Handling transition processing_query2idle_presence')
+
                 #eyes.set('neutral')
                 leds.set(StaticColor('black'))
                 eva_context['state'] = 'idle_presence'
@@ -302,16 +308,23 @@ def process_transition(transition, params):
 
     # Handle a proactive question
     elif transition == 'proactive2processingquery':
+
+        logger.info(f"Proactive question: {params['question']}")
+
         if params['question'] == 'how_are_you':
             if eva_context['state'] == 'idle_presence':
                 eva_context['state'] = 'processing_query'
                 leds.set(StaticColor('black'))
+
+                # Interrupt services
                 wf.stop()
                 pd.stop()
 
                 try:
                     audio_response = server.text_to_speech(ProactivePhrases.get(params['question']))
                 except Exception as e: # Error in server connection
+                    logger.error(f'TTS failed. {str(e)}')
+
                     eva_context['continue_conversation'] = False
                     eva_context['proactive_question'] = ''
                     eva_context['state'] = 'speaking'
@@ -329,7 +342,7 @@ def process_transition(transition, params):
                     try:
                         server.prepare() # Create session in advance if necessary
                     except Exception as e:
-                        pass # TODO: logging
+                        logger.warning(f'Could not create the IBM session. {str(e)}')
 
                     proactive.update('confirm', 'how_are_you')
 
@@ -340,12 +353,16 @@ def process_transition(transition, params):
             if eva_context['state'] == 'listening':
                 eva_context['state'] = 'processing_query'
                 leds.set(StaticColor('black'))
+
+                # Interrupt services
                 mic.stop()
                 wf.stop()
 
                 try:
                     audio_response = server.text_to_speech(ProactivePhrases.get(params['question']))    
                 except Exception as e: # Error in server connection
+                    logger.error(f'TTS failed. {str(e)}')
+
                     eva_context['continue_conversation'] = False
                     eva_context['proactive_question'] = ''
                     eva_context['state'] = 'speaking'
@@ -362,7 +379,7 @@ def process_transition(transition, params):
                     try:
                         server.prepare() # Create session in advance if necessary
                     except Exception as e:
-                        pass # TODO logging
+                        logger.warning(f'Could not create the IBM session. {str(e)}')
 
                     proactive.update('confirm', 'who_are_you')
             else:
@@ -378,23 +395,25 @@ def process_transition(transition, params):
                 if eva_context['state'] == 'idle_presence': pd.stop()
                 eva_context['state'] = 'processing_query'
 
-                try:
-                    # Join messages (if several)
-                    text = '. '.join(
-                        ProactivePhrases.get('single_tg_msg').format(
-                            name=name, msg=messages[0]
-                        ) if len(messages) == 1 
-                        else ProactivePhrases.get('multi_tg_msg').format(
-                                name=name, msg='. '.join(messages)
-                             )
-                        for name, messages in params['messages'].items()
-                    )
-                    print(text) # TODO logging
+                
+                # Join messages (if several)
+                text = '. '.join(
+                    ProactivePhrases.get('single_tg_msg').format(
+                        name=name, msg=messages[0]
+                    ) if len(messages) == 1 
+                    else ProactivePhrases.get('multi_tg_msg').format(
+                            name=name, msg='. '.join(messages)
+                            )
+                    for name, messages in params['messages'].items()
+                )
 
+                try:
                     # Generate the audio
                     audio_response = server.text_to_speech(text)    
 
                 except Exception as e: # Error in server connection
+                    logger.error(f'TTS failed. {str(e)}')
+
                     eva_context['continue_conversation'] = False
                     eva_context['proactive_question'] = ''
                     eva_context['state'] = 'speaking'
@@ -414,6 +433,8 @@ def process_transition(transition, params):
 
     # Record new user face
     elif transition == 'recording_face':
+        logger.info(f"Recording progress: {params['progress']:.2f}; Current state: {eva_context['state']}")
+
         leds.set(Progress(percentage=params['progress']))
 
         if params['progress'] == 100: # Recording completed
@@ -429,6 +450,8 @@ def process_transition(transition, params):
     elif transition == 'received_tg_message':
         if eva_context['state'] in ['idle_presence', 'listening']: # Message can be read right now
             leds.set(StaticColor('black'))
+
+            # Interrupt services
             if eva_context['state'] == 'listening': mic.stop()
             wf.stop()
             if eva_context['state'] == 'idle_presence': pd.stop()
@@ -441,6 +464,8 @@ def process_transition(transition, params):
                     )
                 )    
             except Exception as e: # Error in server connection
+                logger.error(f'TTS failed. {str(e)}')
+
                 eva_context['continue_conversation'] = False
                 eva_context['proactive_question'] = ''
                 eva_context['state'] = 'speaking'
@@ -456,6 +481,9 @@ def process_transition(transition, params):
         else:
             # Pass message to proactive service, to read it later
             proactive.update('sensor', 'received_tg_message', params)
+    
+    else:
+        logger.info(f'Transition {transition} discarded')
 
 
 
@@ -480,7 +508,7 @@ if __name__ == '__main__':
 
     pd.start()
 
-    print('Start!') # TODO logging
+    logger.info('Ready')
     try:
         while True:
             notification = notifications.get()
@@ -501,4 +529,4 @@ if __name__ == '__main__':
     #eyes.stop()
     tg.stop()
 
-    #logging.info(f'UI finished')
+    logger.info('Stopped')

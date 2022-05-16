@@ -1,10 +1,6 @@
-import logging
-
-logging.basicConfig(format='[%(levelname) 5s/%(asctime)s] %(name)s: %(message)s',
-                    level=logging.WARNING)
-
 import asyncio
 import json
+import logging
 import os
 import threading
 from difflib import get_close_matches
@@ -14,6 +10,9 @@ from telethon import TelegramClient, events, functions
 
 class TelegramService:
     def __init__(self, msg_callback):
+        self.logger = logging.getLogger('Telegram')
+        self.logger.setLevel(logging.DEBUG)
+
         with open(os.environ.get('TELEGRAM_CREDENTIALS'), 'r') as f:
             tg_credentials = json.load(f)
 
@@ -28,9 +27,15 @@ class TelegramService:
 
     async def incoming_msg_handler(self, event):
         u = await event.get_sender()
-        self.msg_callback(u.first_name + ((' ' + u.last_name) if u.last_name else ''), event.raw_text)
+        contact_name = u.first_name + ((' ' + u.last_name) if u.last_name else '')
+
+        self.logger.info(f"Received message from '{contact_name}': {event.raw_text}")
+
+        self.msg_callback(contact_name, event.raw_text)
 
     def _thread(self, api_id, api_hash):
+        self.logger.info('Started')
+
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self.loop)
         self.client = TelegramClient(
@@ -58,8 +63,9 @@ class TelegramService:
         # Warning: This method can only be called from a thread different than the one running the asyncio event loop
         
         contact_name = get_close_matches(word=name.lower(), possibilities=self._contacts.keys(), n=1)[0]
-        print(contact_name) # TODO logging
         user_id = self._contacts[contact_name]
+
+        self.logger.info(f"Sending message to '{name}' [{contact_name}]: {message}")
 
         return asyncio.run_coroutine_threadsafe(
             self.client.send_message(user_id, message), self.loop
@@ -72,3 +78,5 @@ class TelegramService:
         if disconnect_coro is not None:
             asyncio.run_coroutine_threadsafe(disconnect_coro, self.loop).result()
         self.thread.join()
+
+        self.logger.info('Stopped')

@@ -84,8 +84,7 @@ def analyze_mood(text):
     nlu_options['text'] = text
     try:
         response = nlu.analyze(**nlu_options).get_result()
-    except Exception as e:
-        print('analyze_mood error: ', str(e)) # TODO logging
+    except Exception:
         return {}
     else:
         return response['emotion']['document']['emotion']
