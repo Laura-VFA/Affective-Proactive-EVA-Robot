@@ -8,7 +8,15 @@ This repo contains the *brain* 🧠 structure of the robot, the proactive and in
 
 ## Main components 🤖
 
-*Coming soon.* 🔜
+EVA is constructed using the following elements:
+- [Screen Waveshare 5.5" HDMI AMOLED](https://www.waveshare.com/5.5inch-hdmi-amoled.htm)
+- [Intel® RealSense™ Depth Camera D435i](https://www.intelrealsense.com/depth-camera-d435i/)
+- [Raspberry Pi 4 Model B](https://www.raspberrypi.com/products/raspberry-pi-4-model-b/)
+- [Matrix Voice](https://www.matrix.one/products/voice)
+- [Tempest M10 RGB Hero 2.0 Gaming Speakers](https://www.tempestofficial.com/inicio/38-speakers-m10-rgb-hero-20.html)
+- Plastic structure printed using 3D printer
+
+It is not compulsory to have exactly the same components, as long as they have the same functionalities. If you change any of them, make sure you have the correct drivers. In particular, if camera is changed, camera frames capturing code must be rewritten to use the suitable library for your camera management (it will probably not be [*pyrealsense2*](https://pypi.org/project/pyrealsense2/)).
 
 ## Built with 🛠️
 
