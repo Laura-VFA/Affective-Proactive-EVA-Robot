@@ -6,21 +6,17 @@ This repo contains the *brain* 🧠 structure of the robot, the proactive and in
   <img src="https://user-images.githubusercontent.com/72492679/169651452-13529463-92b5-4fc1-bb0c-9b8303c46024.png" width="300"/>
 </p>
 
-## Main components 🤖
+## Main components 🤖🛠️
 
 EVA is constructed using the following elements:
-- [Screen Waveshare 5.5" HDMI AMOLED](https://www.waveshare.com/5.5inch-hdmi-amoled.htm)
-- [Intel® RealSense™ Depth Camera D435i](https://www.intelrealsense.com/depth-camera-d435i/)
+- 🖥️ [Screen Waveshare 5.5" HDMI AMOLED](https://www.waveshare.com/5.5inch-hdmi-amoled.htm) for 👀 displaying
+- 📷 [Intel® RealSense™ Depth Camera D435i](https://www.intelrealsense.com/depth-camera-d435i/) 
+- 🎤💡 [Matrix Voice](https://www.matrix.one/products/voice)
+- 🔊 [Tempest M10 RGB Hero 2.0 Gaming Speakers](https://www.tempestofficial.com/inicio/38-speakers-m10-rgb-hero-20.html)
 - [Raspberry Pi 4 Model B](https://www.raspberrypi.com/products/raspberry-pi-4-model-b/)
-- [Matrix Voice](https://www.matrix.one/products/voice)
-- [Tempest M10 RGB Hero 2.0 Gaming Speakers](https://www.tempestofficial.com/inicio/38-speakers-m10-rgb-hero-20.html)
 - Plastic structure printed using 3D printer
 
-It is not compulsory to have exactly the same components, as long as they have the same functionalities. If you change any of them, make sure you have the correct drivers. In particular, if camera is changed, camera frames capturing code must be rewritten to use the suitable library for your camera management (it will probably not be [*pyrealsense2*](https://pypi.org/project/pyrealsense2/)).
-
-## Built with 🛠️
-
-*Coming soon.* 🔜
+It is not mantadory to have exactly the same components, as long as they have the same functionalities. If you change any of them, make sure you have the correct drivers. In particular, if camera is changed, camera frames capturing code must be rewritten to use the suitable library for your camera management (it will probably not be [*pyrealsense2*](https://pypi.org/project/pyrealsense2/)).
 
 ## Installation ⚙️
 
