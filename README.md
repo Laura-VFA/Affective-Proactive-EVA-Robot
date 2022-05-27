@@ -38,13 +38,13 @@ It is necessary to have *apikeys* 🔑 for the following services:
 - [IBM Natural Language Understanding](https://cloud.ibm.com/apidocs/natural-language-understanding?code=python)
 - [IBM Watson Assistant](https://cloud.ibm.com/apidocs/assistant/assistant-v2?code=python)
 
-Both files (Google credentials and IBM credentials) must be stored in a ```credentials/``` directory, located outside the main project directory:
+Both files (Google credentials and IBM credentials) must be stored in a ```credentials/``` directory, located **outside** the main project directory:
 ```bash
 $ any_directory
 .
 ├── credentials
 │   ├── google_credentials.json
-|   ├── assistant_credentials.json
+│   ├── assistant_credentials.json
 │   └── ibm_credentials.env
 └── Eva-Assistant-Python/
 ```
@@ -58,9 +58,12 @@ In this case, by-default environment variables provided by Google and IBM (*GOOG
 
 ## Usage 🚀
 
+For executing EVA, you only have to run from root repo directory:
 ```bash
 python3 main.py
 ```
+
+And that's how you construct your own affective robot! 🤖❤️👩🏻
 
 ## Authors 📝
 - [Laura Villa 🦁](https://github.com/Laura-VFA)
