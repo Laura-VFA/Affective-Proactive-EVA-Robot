@@ -105,6 +105,7 @@ class Close(LedState):
 class Rainbow(LedState):
     def __init__(self):
         self.everloop = ['black'] * led.length
+        self.initial_led_state = self.everloop
 
         self.ledAdjust = 1.01 # MATRIX Voice
 
