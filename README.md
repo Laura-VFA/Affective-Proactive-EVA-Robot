@@ -6,6 +6,15 @@ This repo contains the *brain* 🧠 structure of the robot, the proactive and in
   <img src="https://user-images.githubusercontent.com/72492679/169651452-13529463-92b5-4fc1-bb0c-9b8303c46024.png" width="300"/>
 </p>
 
+## Be different 😎
+
+With EVA, you can have conversations in the more natural way. It is activated by a novel method called *wakeface*, in which the robot activates/listens the user by looking at it. Also, it is able to start conversations by using *proactive questions*.
+
+**Highlighted proactive questions** ✨ *how are you*, *who are you*  
+**Other hightlighted** (cool) **services** *reading incoming telegram messages*, *sending telegram messages*
+
+*What are you waiting for to meet it? Construct your own EVA today!* 🔝
+
 ## Main components 🤖🛠️
 
 EVA is constructed using the following elements:
@@ -52,9 +61,20 @@ In this case, by-default environment variables provided by Google and IBM (*GOOG
 
 **WARNING ⚠️**: IBM Watson Assistant dialog tree can be freely designed by the user. This makes more flexible and customized the user interaction with your own robot 😉
 
-### Telegram service
+### Telegram service 💬
 
-*Coming soon.* 🔜
+Follow these steps:
+1. Get **your own *api_id* and *api_hash*** from [Telegram](https://my.telegram.org) (click [here](https://core.telegram.org/api/obtaining_api_id) and follow the instructions), under API Development.
+2. **Store them in a *telegram_credentials.json*** file. This file must be located in ```credentials/``` directory, and should be like this:
+```json
+{
+  "api_id" : 12345,
+  "api_hash" : "0123456789abcdef0123456789abcdef"
+}
+```
+3. **Create your *telegram.session*** file, located also in ```credentials/``` directory. Using [Telethon](https://github.com/LonamiWebs/Telethon) library is very easy.
+4. Create **two environment variables *TELEGRAM_CREDENTIALS* and *TELEGRAM_SESSION*** which contain their corresponding paths.
+5. **Enjoy** the service!
 
 ## Usage 🚀
 
@@ -62,6 +82,8 @@ For executing EVA, you only have to run from root repo directory:
 ```bash
 python3 main.py
 ```
+
+*➡️**Note**: proactive_phrases.json contains phrases **totally in spanish**, so if you want EVA to speak in a different language, teach it your language by changing this file and developing the IBM Watson Assistant dialog tree in your language. It will be happy to learn it 😊*
 
 And that's how you construct your own affective robot! 🤖❤️👩🏻
 
