@@ -17,7 +17,7 @@ With EVA, you can have conversations in the more natural way. It is activated by
 
 ## Main components 🤖🛠️
 
-EVA is constructed using the following elements:
+*EVA hardware structure is based on the existing EVA robotic platform.* EVA is constructed using the following elements:
 - 🖥️ [Screen Waveshare 5.5" HDMI AMOLED](https://www.waveshare.com/5.5inch-hdmi-amoled.htm) for 👀 displaying
 - 📷 [Intel® RealSense™ Depth Camera D435i](https://www.intelrealsense.com/depth-camera-d435i/) 
 - 🎤💡 [Matrix Voice](https://www.matrix.one/products/voice)
