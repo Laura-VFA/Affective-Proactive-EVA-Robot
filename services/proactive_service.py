@@ -5,13 +5,10 @@ from datetime import datetime, timedelta
 
 
 class ProactivePhrases:
-    phrases_file = None
     phrases = None
 
     @staticmethod
     def load(encodings_file='files/proactive_phrases.json'):
-        ProactivePhrases.encodings_file = encodings_file
-
         with open(encodings_file) as json_file:
             ProactivePhrases.phrases = json.load(json_file)
     

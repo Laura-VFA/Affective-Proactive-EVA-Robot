@@ -143,38 +143,42 @@ def tg_event_handler(name, message): # incoming telegram message
 
 
 def listen_timeout_handler():
-    notifications.put({'transition': 'listening_without_cam2idle_presence'})
+    global eva_context
+
+    if eva_context['state'] == 'listening_without_cam':
+        notifications.put({'transition': 'listening_without_cam2idle_presence'})
 
 
-def process_transition(transition, params):
+def process_transition(transition, params={}):
     global eva_context, listen_timer
 
     logger.info(f'Handling transition {transition}')
 
     # User presence detected in the room
     if transition == 'idle2idle_presence' and eva_context['state'] == 'idle':
-        leds.set(StaticColor('purple'))
         eva_context['state'] = 'idle_presence'
+        leds.set(StaticColor('purple'))
         wf.start()
     
     # User left the room
     elif transition == 'idle_presence2idle' and eva_context['state'] == 'idle_presence':
-        leds.set(StaticColor('black'))
-        eva_context['username'] = None
         eva_context['state'] = 'idle'
+        eva_context['username'] = None
+        leds.set(StaticColor('black'))
         wf.stop()
 
     # User looking at the robot
     elif transition == 'idle_presence2listening' and eva_context['state'] == 'idle_presence':
-        leds.set(Loop('b'))
         eva_context['state'] = 'listening'
+        leds.set(Loop('b'))
         pd.stop()
         mic.start()
 
     # User stopped looking at the robot
     elif transition == 'listening2idle_presence' and eva_context['state'] == 'listening':
-        leds.set(StaticColor('black'))
         eva_context['state'] = 'idle_presence'
+        eva_context['username'] = None
+        leds.set(StaticColor('black'))
         mic.stop()
         pd.start()
 
@@ -182,22 +186,21 @@ def process_transition(transition, params):
     elif transition == 'listening2recording' and eva_context['state'] == 'listening':
         eva_context['state'] = 'recording'
         leds.set(Loop('w'))
+        wf.stop()
         try:
             server.prepare() # Create session in advance if necessary
         except Exception as e:
-            logger.warning(f'Could not create the IBM session. {str(e)}')
-        wf.stop()
+            logger.warning(f'Could not create the IBM session. {str(e)}') 
     
     # User in conversation starts talking
     elif transition == 'listening_without_cam2recording' and eva_context['state'] == 'listening_without_cam':
         eva_context['state'] = 'recording'
         leds.set(Loop('w'))
+        listen_timer.cancel()
         try:
             server.prepare() # Create session in advance if necessary
         except Exception as e:
             logger.warning(f'Could not create the IBM session. {str(e)}')
-
-        listen_timer.cancel()
 
     # User finished talking: sending audio to server
     elif transition == 'recording2processingquery' and eva_context['state'] == 'recording':
@@ -221,6 +224,7 @@ def process_transition(transition, params):
             eva_context['continue_conversation'] = False
             eva_context['proactive_question'] = ''
             eva_context['state'] = 'speaking'
+            eva_context['tg_destination_name'] = ''
             leds.set(Breath('r'))
             speaker.start(connection_error_audio)
         else:
@@ -249,7 +253,7 @@ def process_transition(transition, params):
 
                 # Reproduce response                
                 eva_context['state'] = 'speaking'
-                #eyes.set(response.eva_mood)
+                eyes.set(response.eva_mood)
                 leds.set(Breath('b'))
                 speaker.start(response.audio)
 
@@ -269,9 +273,12 @@ def process_transition(transition, params):
                 logger.info(f'Not text in audio, back to idle')
                 logger.info(f'Handling transition processing_query2idle_presence')
 
-                #eyes.set('neutral')
-                leds.set(StaticColor('black'))
                 eva_context['state'] = 'idle_presence'
+                eva_context['username'] = None
+                eva_context['proactive_question'] = ''
+                eva_context['tg_destination_name'] = ''                
+                eyes.set('neutral')
+                leds.set(StaticColor('black'))
                 pd.start()
                 wf.start()
 
@@ -288,6 +295,11 @@ def process_transition(transition, params):
     # Conversation finishes due to goodbye
     elif transition == 'speaking2idle_presence' and eva_context['state'] == 'speaking':
         eva_context['state'] = 'idle_presence' 
+        eva_context['username'] = None
+        eva_context['proactive_question'] = ''
+        eva_context['tg_destination_name'] = ''
+        eva_context['continue_conversation'] = False
+        eyes.set('neutral')
         leds.set(StaticColor('black'))
         rf.stop()
         pd.start()
@@ -299,7 +311,7 @@ def process_transition(transition, params):
         eva_context['continue_conversation'] =  False
         eva_context['proactive_question'] =  ''
         eva_context['tg_destination_name'] = ''
-        #eyes.set('neutral')
+        eyes.set('neutral')
         leds.set(Close('blue'))
         mic.stop()
         rf.stop()
@@ -387,13 +399,13 @@ def process_transition(transition, params):
             
         elif params['question'] == 'read_pending_messages':
             if eva_context['state'] in ['listening', 'idle_presence']: # Check if it's a good moment to read the messages
+                eva_context['state'] = 'processing_query'
                 leds.set(StaticColor('black'))
 
                 # Interrupt services
                 if eva_context['state'] == 'listening': mic.stop()
                 wf.stop()
                 if eva_context['state'] == 'idle_presence': pd.stop()
-                eva_context['state'] = 'processing_query'
 
                 
                 # Join messages (if several)
@@ -449,13 +461,13 @@ def process_transition(transition, params):
     # Handle incoming telegram message
     elif transition == 'received_tg_message':
         if eva_context['state'] in ['idle_presence', 'listening']: # Message can be read right now
+            eva_context['state'] = 'processing_query'
             leds.set(StaticColor('black'))
 
             # Interrupt services
             if eva_context['state'] == 'listening': mic.stop()
             wf.stop()
             if eva_context['state'] == 'idle_presence': pd.stop()
-            eva_context['state'] = 'processing_query'
 
             try:
                 audio_response = server.text_to_speech(
@@ -490,7 +502,7 @@ def process_transition(transition, params):
 if __name__ == '__main__':
     
     leds = MatrixLed()
-    #eyes = Eyes()
+    eyes = Eyes()
     FaceDB.load() # load face embeddings
     ProactivePhrases.load()
 
@@ -513,9 +525,7 @@ if __name__ == '__main__':
         while True:
             notification = notifications.get()
 
-            transition = notification['transition']
-            params = notification.get('params', {})
-            process_transition(transition, params)
+            process_transition(**notification)
     except KeyboardInterrupt:
         pass
         
@@ -523,10 +533,10 @@ if __name__ == '__main__':
     wf.stop()
     rf.stop()
     pd.stop()
-    mic.stop()
+    mic.destroy()
     speaker.destroy()
     leds.stop()
-    #eyes.stop()
+    eyes.stop()
     tg.stop()
 
     logger.info('Stopped')
