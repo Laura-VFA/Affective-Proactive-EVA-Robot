@@ -26,6 +26,7 @@ class Recorder:
         
         self.p = pyaudio.PyAudio()
         self.vad = webrtcvad.Vad(vad_agressiveness)
+        self.stream = None
 
         self._thread = None
         self.stopped = Event()
@@ -98,6 +99,7 @@ class Recorder:
         self.logger.info('Stopped recording')
         self.callback('stop_recording', b''.join(self.audio2send))
         self.stream.close()
+        self.stream = None
 
 
     def stop(self):
@@ -110,9 +112,14 @@ class Recorder:
         if self._thread is not None and self._thread.is_alive():
             self._thread.join()
 
-        self.stream.close()
+        if self.stream is not None:
+            self.stream.close()
         self.start_recording.clear()
         self.stop_recording.clear()
+    
+    def destroy(self):
+        self.stop()
+        self.p.terminate()
 
 def frame_generator(frame_duration_ms, audio, sample_rate):
     """Generates audio frames from PCM audio data.

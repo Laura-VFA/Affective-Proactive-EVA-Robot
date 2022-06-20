@@ -56,6 +56,7 @@ def query(request: Request):
 
     # TTS
     audio_response = text_to_speech(text_response)
+    logger.info("TTS result obtained")
 
     # Send back the response
     return Response(
