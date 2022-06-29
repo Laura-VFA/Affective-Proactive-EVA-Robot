@@ -8,6 +8,7 @@ import face_recognition
 import numpy as np
 import pandas as pd
 from fdlite import FaceDetection, FaceDetectionModel, FaceIndex
+from imutils.video import FPS
 from PIL import Image
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
@@ -30,7 +31,7 @@ class FaceDB:
                 'names': df[0].to_list(),
                 'encodings': df.loc[:, 1:128].to_numpy()
             }
-        except pd.errors.EmptyDataError:
+        except (pd.errors.EmptyDataError, FileNotFoundError):
             FaceDB.encodings = {'names': [], 'encodings': np.empty((0,128))}
     
     @staticmethod
@@ -94,6 +95,7 @@ class Wakeface(CameraService):
         self.logger.info('Detector started')
 
         CameraService.camera.start(self.__class__.__name__)
+        fps = FPS().start()
 
         while not self.stopped.is_set():
             # Get frame
@@ -129,7 +131,12 @@ class Wakeface(CameraService):
 
                     # Notify recognition thread about new looking faces detected
                     self.face_queue.put((frame, bboxes_looking))
-                
+
+            fps.update()
+
+        fps.stop()
+        self.logger.info(f"FPS: {fps.fps():.4f} (elapsed time: {fps.elapsed():.4f} s)")
+
     
     def stop(self):
         self.stopped.set()
@@ -187,7 +194,7 @@ class Wakeface(CameraService):
 
                 self.logger.info(f'Recognized history updated: {face_history}')
         
-    def recognize(self, frame, bboxes_looking):
+    def recognize(self, frame, bboxes_looking, tolerance=0.55):
         ''' https://pyimagesearch.com/2018/06/25/raspberry-pi-face-recognition/ '''
         boxes = [(int(box.ymin), int(box.xmax), int(box.ymax), int(box.xmin)) for box in bboxes_looking]
         
@@ -196,7 +203,7 @@ class Wakeface(CameraService):
 
         for encoding in encodings:
             matches = face_recognition.compare_faces(FaceDB.encodings["encodings"],
-                encoding)
+                encoding, tolerance)
             name = None
 
             if any(matches):
@@ -394,8 +401,14 @@ class PresenceDetector(CameraService):
         self.logger.info('Started')
 
         CameraService.camera.start(self.__class__.__name__)
+        fps = FPS().start()
+
         while not self.stopped.is_set():
             frame = CameraService.camera.get_color_frame(resize_width=500)
+
+            (h, w) = frame.shape[:2]
+            if h * w == 0: # Check if image has 0 size
+                continue
 
             # Run presence detection using the model
             detections = self.detector.detect(frame)
@@ -404,6 +417,12 @@ class PresenceDetector(CameraService):
                 self.callback('person_detected')
             else:
                 self.callback('empty_room')
+            
+            fps.update()
+
+        fps.stop()
+        self.logger.info(f"FPS: {fps.fps():.4f} (elapsed time: {fps.elapsed():.4f} s)")
+
 
 
     def stop(self):
