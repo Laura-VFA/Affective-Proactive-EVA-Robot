@@ -12,11 +12,9 @@ from .draw import draw_face, get_face_from_file
 from .interpolation import get_in_between_faces
 
 
-class Eyes:
-    WIDTH = 1080
-    HEIGHT = 1920
+class Eyes():
 
-    def __init__(self, faces_dir='files/faces', face_cache='files/face_cache'):
+    def __init__(self, faces_dir='files/faces', face_cache='files/face_cache', sc_width=1080, sc_height=1920):
         self.logger = logging.getLogger('Eyes')
         self.logger.setLevel(logging.DEBUG)
 
@@ -25,6 +23,8 @@ class Eyes:
 
         self.faces_dir = Path(faces_dir)
         self.face_cache = Path(face_cache)
+        self.screen_width = sc_width
+        self.screen_heigth = sc_height
 
         self.transition_faces = queue.Queue() # Queue for managing and processing the canvas face re-drawings
 
@@ -71,7 +71,7 @@ class Eyes:
                 if os.path.exists(face_file):
                     canvas = cv2.imread(face_file) # Read the face from cache
                 else:
-                    canvas = draw_face(new_face, Eyes.WIDTH, Eyes.HEIGHT) # Draw it
+                    canvas = draw_face(new_face, self.screen_width, self.screen_heigth) # Draw it
                     cv2.imwrite(face_file, canvas) 
                 cv2.imshow("window", canvas)
 
